@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>木作工程估價系統</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #F7F4F0; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+    
+    
+
+const COMPANIES = ["易構空間設計", "慕熙空間設計", "崧城室內設計", "九央室內設計", "其他"];
+const UNITS = ["坪", "尺", "支", "樘", "組", "式", "口", "片", "張"];
+
+const DEFAULT_PROTECTION = [
+  { id: "dp1", name: "室內地坪保護", unit: "坪", qty: 0, price: 650, note: "PP板+兩分夾板保護" },
+  { id: "dp2", name: "公共區域保護工程+車位", unit: "式", qty: 1, price: 0, note: "依現場實際測量坪數" },
+  { id: "dp3", name: "施工過程保護拆除清運", unit: "式", qty: 1, price: 15000, note: "" },
+];
+
+const SEED_DATA = {
+  "易構空間設計": [
+    {
+      id: "q1", projectName: "南悅豐映2A3", address: "", unitNo: "2A3", date: "2026-03-30",
+      protection: [
+        { id: "p1", name: "室內保護工程", unit: "坪", qty: 20.4, price: 650, note: "玄關大門、廚房檯面上櫃、地板全室" },
+        { id: "p2", name: "梯廳保護(地面雙層)", unit: "坪", qty: 5.2, price: 650, note: "依照大樓管委會規範" },
+        { id: "p3", name: "梯廳保護(牆面雙層)", unit: "坪", qty: 7.5, price: 650, note: "" },
+        { id: "p4", name: "車位保護", unit: "式", qty: 2, price: 800, note: "" },
+        { id: "p5", name: "門框大門保護(雙層)", unit: "式", qty: 1, price: 1400, note: "" },
+        { id: "p6", name: "防火門、逃生門", unit: "樘", qty: 3, price: 600, note: "" },
+        { id: "p7", name: "垃圾清運", unit: "式", qty: 1, price: 18000, note: "" },
+      ],
+      spaces: [
+        { id: "s1", name: "天花板", items: [
+          { id: "i1", name: "玄關/客廳/餐廳-木作平釘矽酸鈣板天花板", unit: "坪", qty: 7.7, price: 3500, note: "國產合板角材、6mm南亞矽酸鈣板，含燈具開孔，油漆另列" },
+          { id: "i2", name: "客廳-低層天花板立板(直角)", unit: "尺", qty: 28, price: 250, note: "" },
+          { id: "i3", name: "客廳-窗簾盒", unit: "尺", qty: 13, price: 450, note: "" },
+          { id: "i4", name: "餐廳-餐吊燈處木心板補強", unit: "式", qty: 1, price: 300, note: "" },
+          { id: "i5", name: "客廳-沙發區吊畫軌道底座", unit: "尺", qty: 6, price: 100, note: "" },
+          { id: "i6", name: "客廳-吊畫軌道底座", unit: "尺", qty: 3.5, price: 100, note: "" },
+          { id: "i7", name: "走廊-吊畫軌道底座", unit: "尺", qty: 5, price: 100, note: "" },
+          { id: "i8", name: "廚房-木作拉門軌道溝槽", unit: "尺", qty: 6.5, price: 280, note: "" },
+          { id: "i9", name: "廚房-木作平釘矽酸鈣板天花板", unit: "坪", qty: 0.5, price: 3500, note: "" },
+          { id: "i10", name: "廚房-低層天花板立板(直角)", unit: "尺", qty: 8, price: 250, note: "" },
+          { id: "i11", name: "主臥室-陽台前木作拉門軌道溝槽", unit: "尺", qty: 6, price: 280, note: "" },
+          { id: "i12", name: "主臥室-木作平釘矽酸鈣板天花板", unit: "坪", qty: 4.5, price: 3500, note: "含燈具開孔，油漆另列" },
+          { id: "i13", name: "主臥室-衣櫃木作拉門軌道溝槽", unit: "尺", qty: 6.5, price: 280, note: "" },
+          { id: "i14", name: "主臥室-低層天花板立板", unit: "尺", qty: 28, price: 250, note: "" },
+          { id: "i15", name: "主臥室-窗簾盒", unit: "尺", qty: 10, price: 450, note: "" },
+          { id: "i16", name: "主臥室-冷氣盒", unit: "尺", qty: 8.5, price: 300, note: "" },
+          { id: "i17", name: "主臥室-床頭吊畫軌道底座", unit: "尺", qty: 3.5, price: 100, note: "" },
+          { id: "i18", name: "主臥室-門口吊畫軌道底座", unit: "尺", qty: 3.5, price: 100, note: "" },
+          { id: "i19", name: "次臥室-木作平釘矽酸鈣板天花板", unit: "坪", qty: 3, price: 3500, note: "含燈具開孔，油漆另列" },
+          { id: "i20", name: "次臥室-窗簾盒", unit: "尺", qty: 8, price: 450, note: "" },
+          { id: "i21", name: "次臥室-冷氣盒", unit: "尺", qty: 10, price: 300, note: "" },
+          { id: "i22", name: "次臥室-低層天花板立板", unit: "尺", qty: 25, price: 250, note: "" },
+          { id: "i23", name: "次臥室-床尾吊畫軌道底座", unit: "尺", qty: 5.5, price: 100, note: "" },
+          { id: "i24", name: "次臥室-床頭吊畫軌道底座", unit: "尺", qty: 3.5, price: 100, note: "" },
+          { id: "i25", name: "書房-木作平釘矽酸鈣板天花板", unit: "坪", qty: 2, price: 3500, note: "含燈具開孔，油漆另列" },
+          { id: "i26", name: "書房-窗簾盒", unit: "尺", qty: 6, price: 450, note: "" },
+          { id: "i27", name: "書房-冷氣盒", unit: "尺", qty: 5, price: 400, note: "" },
+          { id: "i28", name: "書房-低層天花板立板", unit: "尺", qty: 19, price: 250, note: "" },
+        ]},
+        { id: "s2", name: "客廳／玄關／餐廳", items: [
+          { id: "i29", name: "玄關電箱墊厚封板", unit: "尺", qty: 4, price: 1000, note: "W116.5*H233*D2cm，面層乳膠漆" },
+          { id: "i30", name: "玄關-洞洞門", unit: "式", qty: 1, price: 22000, note: "W60*H233*D4cm，塗裝木皮板" },
+          { id: "i31", name: "玄關-吊櫃後木作結構", unit: "尺", qty: 2, price: 2500, note: "W59*H233*D11cm" },
+          { id: "i32", name: "餐廳-木作層板", unit: "尺", qty: 6, price: 1000, note: "W169*H4*D20cm，塗裝木皮板" },
+          { id: "i33", name: "客廳-隔間牆", unit: "尺", qty: 3.5, price: 1400, note: "面層麂皮漆另列" },
+          { id: "i34", name: "廚房-拉門", unit: "樘", qty: 1, price: 22000, note: "W100*H233*D4cm，面層烤漆另列" },
+          { id: "i35", name: "進口Villes緩衝滑軌", unit: "式", qty: 1, price: 3500, note: "" },
+          { id: "i36", name: "客廳-電視牆電視櫃子", unit: "尺", qty: 10, price: 6000, note: "W320*H193*D25cm，塗裝木皮板" },
+          { id: "i37", name: "客廳-電視牆開門櫃", unit: "尺", qty: 1.5, price: 7500, note: "W40*H193*D29，塗裝木皮板" },
+          { id: "i38", name: "客廳-電視牆落地櫃", unit: "式", qty: 10, price: 3300, note: "W286*H23*D40，塗裝木皮板" },
+          { id: "i39", name: "客廳-底座", unit: "尺", qty: 11, price: 1200, note: "W320*H5*D40，面層麂皮漆另列" },
+          { id: "i40", name: "客廳-L型電視牆", unit: "尺", qty: 2, price: 1200, note: "面層麂皮漆另列" },
+          { id: "i41", name: "電器櫃上方封板", unit: "尺", qty: 2.5, price: 500, note: "" },
+          { id: "i42", name: "電器櫃位移", unit: "式", qty: 1, price: 2000, note: "電器需水電協助" },
+        ]},
+        { id: "s3", name: "主臥室", items: [
+          { id: "i43", name: "床頭造型背牆+企口", unit: "尺", qty: 10.5, price: 3500, note: "W306*H239*D4cm，塗裝木皮板，含鋁條燈槽" },
+          { id: "i44", name: "床尾墊厚封板+企口", unit: "尺", qty: 10.3, price: 3500, note: "W309*H239*D2cm，塗裝木皮板" },
+          { id: "i45", name: "化妝桌", unit: "尺", qty: 8, price: 3800, note: "W60*H239*D40，塗裝木皮板" },
+          { id: "i46", name: "化妝桌右側收納櫃", unit: "尺", qty: 1.7, price: 8500, note: "W50*H239*D44，塗裝木皮板" },
+          { id: "i47", name: "床尾L隔間牆", unit: "尺", qty: 4, price: 1600, note: "面層乳膠漆另列" },
+          { id: "i48", name: "衣櫃左右側落", unit: "尺", qty: 4, price: 1700, note: "波麗板" },
+          { id: "i49", name: "衣櫃層板", unit: "尺", qty: 5, price: 500, note: "波麗板" },
+          { id: "i50", name: "衣櫃-拉門", unit: "樘", qty: 1, price: 22000, note: "面層烤漆另列" },
+          { id: "i51", name: "進口Villes緩衝滑軌", unit: "式", qty: 1, price: 3500, note: "" },
+          { id: "i52", name: "衣櫃-吊衣架五金", unit: "式", qty: 1, price: 800, note: "" },
+          { id: "i53", name: "陽台門前-拉門", unit: "樘", qty: 1, price: 22000, note: "面層烤漆另列" },
+          { id: "i54", name: "進口Villes緩衝滑軌", unit: "式", qty: 1, price: 3500, note: "" },
+        ]},
+        { id: "s4", name: "次臥室", items: [
+          { id: "i55", name: "床頭背板", unit: "尺", qty: 12.7, price: 3500, note: "W380.5*H239*D5cm，塗裝木皮板，含鋁條燈槽" },
+        ]},
+      ],
+      materials: [
+        { id: "m1", name: "皮板", unit: "張", qty: 21, price: 3200, note: "" },
+        { id: "m2", name: "不織布", unit: "張", qty: 5, price: 1600, note: "" },
+      ],
+    },
+    {
+      id: "q2", projectName: "國泰The Park", address: "", unitNo: "9A", date: "2025-12-17",
+      protection: [
+        { id: "qp1", name: "公共區域保護工程+車位", unit: "式", qty: 1, price: 0, note: "依現場實坪另行報價" },
+        { id: "qp2", name: "室內地坪保護", unit: "坪", qty: 30, price: 650, note: "PP板+兩分夾板保護" },
+        { id: "qp3", name: "施工過程及保護拆除清運", unit: "式", qty: 1, price: 15000, note: "" },
+      ],
+      spaces: [
+        { id: "qs1", name: "天花板工程", items: [
+          { id: "qi1", name: "全室木作平釘天花板-表面噴漆", unit: "坪", qty: 28, price: 3600, note: "" },
+          { id: "qi2", name: "公共空間立垂板", unit: "尺", qty: 39.6, price: 250, note: "" },
+          { id: "qi3", name: "冷氣側出風口加鋁條燈造型", unit: "尺", qty: 14.7, price: 500, note: "" },
+          { id: "qi4", name: "冷氣下出風孔", unit: "尺", qty: 14.7, price: 250, note: "" },
+          { id: "qi5", name: "窗簾盒加立垂板", unit: "尺", qty: 15.5, price: 450, note: "" },
+          { id: "qi6", name: "客房立垂板", unit: "尺", qty: 25.6, price: 200, note: "" },
+          { id: "qi7", name: "客房窗簾盒", unit: "尺", qty: 7.6, price: 300, note: "" },
+          { id: "qi8", name: "客房冷氣下出風孔", unit: "尺", qty: 7.5, price: 250, note: "" },
+          { id: "qi9", name: "主臥室立垂板", unit: "尺", qty: 34, price: 250, note: "" },
+          { id: "qi10", name: "主臥室窗簾盒加立板", unit: "尺", qty: 8.4, price: 450, note: "" },
+          { id: "qi11", name: "主臥室冷氣下出風孔", unit: "尺", qty: 13.5, price: 250, note: "" },
+          { id: "qi12", name: "孝親房立垂板", unit: "尺", qty: 8.2, price: 250, note: "" },
+          { id: "qi13", name: "孝親房窗簾盒加立垂板", unit: "尺", qty: 8.6, price: 300, note: "" },
+          { id: "qi14", name: "孝親房冷氣下出風孔", unit: "尺", qty: 8.2, price: 250, note: "" },
+          { id: "qi15", name: "冷氣維修口(大、2片)", unit: "組", qty: 3, price: 1400, note: "" },
+          { id: "qi16", name: "冷氣維修口(小、1片)", unit: "組", qty: 3, price: 1000, note: "" },
+          { id: "qi17", name: "吊畫軌", unit: "尺", qty: 27.8, price: 100, note: "" },
+        ]},
+        { id: "qs2", name: "公共區域（客廳、廚房）", items: [
+          { id: "qi18", name: "玄關電箱隱藏門", unit: "尺", qty: 2.5, price: 3500, note: "" },
+          { id: "qi19", name: "玄關端景櫃", unit: "尺", qty: 4.7, price: 7200, note: "" },
+          { id: "qi20", name: "玄關端景櫃", unit: "尺", qty: 1.2, price: 2000, note: "" },
+          { id: "qi21", name: "木作隔間", unit: "尺", qty: 14.4, price: 1000, note: "" },
+          { id: "qi22", name: "木作隔間-壁面貼皮", unit: "尺", qty: 5.4, price: 1800, note: "" },
+          { id: "qi23", name: "電視牆", unit: "尺", qty: 15.1, price: 4000, note: "雙層底板" },
+          { id: "qi24", name: "電視牆-高櫃", unit: "尺", qty: 7, price: 7200, note: "" },
+          { id: "qi25", name: "電視牆-拉門", unit: "片", qty: 1, price: 16500, note: "面貼木皮板" },
+          { id: "qi26", name: "電視牆-拉門五金", unit: "組", qty: 1, price: 3500, note: "" },
+          { id: "qi27", name: "書桌櫃", unit: "尺", qty: 12, price: 8000, note: "" },
+          { id: "qi28", name: "廚房-拉門", unit: "片", qty: 1, price: 13000, note: "" },
+          { id: "qi29", name: "廚房-拉門五金", unit: "組", qty: 1, price: 3500, note: "" },
+        ]},
+        { id: "qs3", name: "客房", items: [
+          { id: "qi30", name: "床頭背牆面貼木皮板", unit: "尺", qty: 9.6, price: 1600, note: "" },
+          { id: "qi31", name: "衣櫃左側封板", unit: "式", qty: 1, price: 1000, note: "" },
+          { id: "qi32", name: "地板榻榻米四周封板", unit: "尺", qty: 34, price: 300, note: "" },
+          { id: "qi33", name: "地板面貼木皮板(含底板)", unit: "式", qty: 1, price: 25000, note: "" },
+        ]},
+        { id: "qs4", name: "孝親房", items: [
+          { id: "qi34", name: "床頭櫃牆", unit: "尺", qty: 8.7, price: 1300, note: "" },
+          { id: "qi35", name: "衣櫃左側封板", unit: "式", qty: 1, price: 1000, note: "" },
+        ]},
+        { id: "qs5", name: "主臥室", items: [
+          { id: "qi36", name: "衣櫃-拉門", unit: "片", qty: 2, price: 13000, note: "" },
+          { id: "qi37", name: "衣櫃-側板", unit: "組", qty: 1, price: 4600, note: "" },
+          { id: "qi38", name: "衣櫃-層板鋁條燈", unit: "尺", qty: 8, price: 500, note: "" },
+          { id: "qi39", name: "拉門五金", unit: "組", qty: 2, price: 3500, note: "" },
+          { id: "qi40", name: "拉門軌道(4支)", unit: "組", qty: 1, price: 2600, note: "" },
+          { id: "qi41", name: "更衣間外牆封板", unit: "式", qty: 1, price: 1500, note: "" },
+        ]},
+      ],
+      materials: [],
+    },
+  ],
+  "慕熙空間設計": [{"id":"m1","projectName":"櫻花知築","address":"","unitNo":"B5-01","date":"2026-03-28","protection":[{"id":"mp1","name":"公設保護","unit":"坪","qty":17,"price":550,"note":""},{"id":"mp2","name":"室內保護","unit":"坪","qty":15,"price":550,"note":""},{"id":"mp3","name":"大門保護","unit":"式","qty":1,"price":500,"note":""},{"id":"mp4","name":"流理檯保護","unit":"式","qty":1,"price":800,"note":""},{"id":"mp5","name":"車位保護","unit":"坪","qty":2,"price":550,"note":""},{"id":"mp6","name":"完工保護拆除及垃圾清運費","unit":"式","qty":1,"price":5000,"note":""}],"spaces":[{"id":"ms1","name":"客廳","items":[{"id":"mi1","name":"平釘天花板","unit":"坪","qty":5,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"},{"id":"mi2","name":"冷氣包樑","unit":"尺","qty":9.4,"price":300,"note":""},{"id":"mi3","name":"維修孔","unit":"口","qty":1,"price":1000,"note":""},{"id":"mi4","name":"冷氣開帽","unit":"口","qty":1,"price":1000,"note":""}]}],"materials":[]}, {"id":"m2","projectName":"丹源齊玉","address":"台中市南屯區益豐西街75號","unitNo":"6A","date":"2026-03-08","protection":[{"id":"dp1","name":"公共區域保護工程+車位","unit":"式","qty":1,"price":0,"note":"依現場實際測量坪數"},{"id":"dp2","name":"室內地坪保護","unit":"坪","qty":16,"price":650,"note":"PP板+兩分夾板保護"},{"id":"dp3","name":"廚房PP板保護","unit":"式","qty":1,"price":800,"note":""},{"id":"dp4","name":"大門門框保護","unit":"式","qty":1,"price":600,"note":""},{"id":"dp5","name":"施工過程及保護拆除清運","unit":"式","qty":1,"price":15000,"note":""}],"spaces":[{"id":"ds1","name":"公共區域（玄關、餐廳、客廳、廚房、走廊）","items":[{"id":"di1","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":8,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"},{"id":"di2","name":"包樑立面（議價合併）","unit":"式","qty":1,"price":20000,"note":""},{"id":"di3","name":"窗簾盒","unit":"尺","qty":9,"price":350,"note":""},{"id":"di4","name":"天花板預埋拉門軌道","unit":"尺","qty":5.5,"price":250,"note":""},{"id":"di5","name":"預埋掛畫軌道","unit":"尺","qty":14,"price":200,"note":""},{"id":"di6","name":"吊畫繩","unit":"條","qty":4,"price":0,"note":""},{"id":"di7","name":"木作廚房+餐廳主牆","unit":"式","qty":1,"price":18000,"note":""},{"id":"di8","name":"木作吧台骨架","unit":"式","qty":1,"price":1200,"note":"人造石檯面(6分木心板)"},{"id":"di9","name":"木作隔柵","unit":"支","qty":2,"price":4000,"note":""},{"id":"di10","name":"電視牆+抽屜","unit":"尺","qty":13,"price":6000,"note":"五金-川湖三截式緩衝滑軌"},{"id":"di11","name":"天花板結構補強","unit":"式","qty":1,"price":0,"note":"天花板結構補強"}]},{"id":"ds2","name":"孝親房","items":[{"id":"di12","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":0.7,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板"},{"id":"di13","name":"包樑立面","unit":"尺","qty":15.2,"price":300,"note":""},{"id":"di14","name":"1/4圓線板","unit":"尺","qty":8.7,"price":150,"note":""},{"id":"di15","name":"窗簾盒","unit":"尺","qty":7,"price":250,"note":""},{"id":"di16","name":"預埋掛畫軌道","unit":"尺","qty":7,"price":200,"note":""},{"id":"di17","name":"吊畫繩","unit":"條","qty":2,"price":0,"note":""}]},{"id":"ds3","name":"主臥房","items":[{"id":"di18","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":0.8,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板"},{"id":"di19","name":"包樑立面","unit":"尺","qty":21,"price":300,"note":""},{"id":"di20","name":"1/4圓線板","unit":"尺","qty":10.5,"price":150,"note":""},{"id":"di21","name":"窗簾盒","unit":"尺","qty":6.7,"price":350,"note":""},{"id":"di22","name":"木作床邊格柵","unit":"支","qty":2,"price":3000,"note":""},{"id":"di23","name":"木作床頭矮牆","unit":"尺","qty":8.6,"price":2300,"note":""},{"id":"di24","name":"木作書桌層板兩層","unit":"尺","qty":10.6,"price":700,"note":""},{"id":"di25","name":"木作抽屜書桌","unit":"尺","qty":5.3,"price":3000,"note":"五金-川湖三截式緩衝滑軌"}]},{"id":"ds4","name":"女兒房","items":[{"id":"di26","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":1.88,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板"},{"id":"di27","name":"包樑立面","unit":"尺","qty":22,"price":300,"note":""},{"id":"di28","name":"1/4圓線板","unit":"尺","qty":6.5,"price":150,"note":""},{"id":"di29","name":"窗簾盒","unit":"尺","qty":6.9,"price":250,"note":""},{"id":"di30","name":"壁掛空調盒","unit":"口","qty":1,"price":0,"note":""}]},{"id":"ds5","name":"追加項","items":[{"id":"di31","name":"女兒房牆面平釘矽酸鈣板","unit":"坪","qty":1.8,"price":1400,"note":""},{"id":"di32","name":"主臥房牆面平釘矽酸鈣板","unit":"坪","qty":1.8,"price":1400,"note":""},{"id":"di33","name":"孝親房牆面平釘矽酸鈣板","unit":"坪","qty":2.4,"price":1400,"note":""},{"id":"di34","name":"主臥木作平釘天花板-表面噴漆","unit":"坪","qty":2.8,"price":3400,"note":""},{"id":"di35","name":"電視牆面貼木平板","unit":"尺","qty":9,"price":500,"note":""}]}],"materials":[]},{"id":"m3","projectName":"丹源齊玉","address":"台中市南屯區益豐西街75號","unitNo":"6B","date":"2025-12-04","protection":[{"id":"ep1","name":"公共區域保護工程+車位","unit":"坪","qty":15,"price":350,"note":""},{"id":"ep2","name":"電梯門框保護","unit":"式","qty":1,"price":800,"note":""},{"id":"ep3","name":"大門門框保護","unit":"式","qty":1,"price":600,"note":""},{"id":"ep4","name":"室內地坪保護","unit":"坪","qty":16,"price":650,"note":"PP板+兩分夾板保護"},{"id":"ep5","name":"廚房PP板保護","unit":"式","qty":1,"price":800,"note":""},{"id":"ep6","name":"施工過程及保護拆除清運","unit":"式","qty":1,"price":15000,"note":""}],"spaces":[{"id":"es1","name":"公共區域（玄關、餐廳、客廳、廚房、走廊）","items":[{"id":"ei1","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":5.6,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板"},{"id":"ei2","name":"木作包樑天花板","unit":"尺","qty":44.8,"price":300,"note":""},{"id":"ei3","name":"1/4圓線板","unit":"尺","qty":36.6,"price":180,"note":""},{"id":"ei4","name":"窗簾盒","unit":"尺","qty":8.8,"price":450,"note":""},{"id":"ei5","name":"天花板預埋拉門軌道","unit":"尺","qty":5.5,"price":250,"note":""},{"id":"ei6","name":"預埋掛畫軌道","unit":"尺","qty":4,"price":150,"note":""},{"id":"ei7","name":"吊畫繩","unit":"條","qty":2,"price":0,"note":""},{"id":"ei8","name":"木作廚房+餐廳主牆","unit":"式","qty":1,"price":18000,"note":"尺寸 6.4 尺"},{"id":"ei9","name":"木作隔柵","unit":"支","qty":4,"price":3200,"note":""},{"id":"ei10","name":"電視牆+抽屜+層板","unit":"尺","qty":13.4,"price":6200,"note":"五金-川湖三截式緩衝滑軌"},{"id":"ei11","name":"天花板結構補強","unit":"式","qty":1,"price":0,"note":"天花板結構補強"},{"id":"ei12","name":"電視櫃改色","unit":"式","qty":1,"price":4000,"note":""}]},{"id":"es2","name":"孝親房","items":[{"id":"ei13","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":0.7,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板"},{"id":"ei14","name":"木作包樑天花板","unit":"尺","qty":16.1,"price":300,"note":""},{"id":"ei15","name":"1/4圓線板","unit":"尺","qty":8.7,"price":180,"note":""},{"id":"ei16","name":"窗簾盒","unit":"尺","qty":6.8,"price":300,"note":""}]},{"id":"es3","name":"主臥房","items":[{"id":"ei17","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":0.76,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板"},{"id":"ei18","name":"木作包樑天花板","unit":"尺","qty":19.9,"price":300,"note":""},{"id":"ei19","name":"1/4圓線板","unit":"尺","qty":10.5,"price":180,"note":""},{"id":"ei20","name":"窗簾盒","unit":"尺","qty":10.6,"price":300,"note":""},{"id":"ei21","name":"木作半高矮牆","unit":"尺","qty":3.6,"price":1800,"note":""},{"id":"ei22","name":"木作層板兩層","unit":"尺","qty":5.3,"price":500,"note":""},{"id":"ei23","name":"主臥衛浴改外開","unit":"式","qty":1,"price":2000,"note":""},{"id":"ei24","name":"主臥衛浴改色","unit":"式","qty":1,"price":6500,"note":""}]},{"id":"es4","name":"書房","items":[{"id":"ei25","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":2,"price":3400,"note":"永新三合一角材、6mm國產南亞矽酸鈣板"},{"id":"ei26","name":"木作包樑天花板","unit":"尺","qty":15.2,"price":300,"note":""},{"id":"ei27","name":"1/4圓線板","unit":"尺","qty":6.9,"price":180,"note":""},{"id":"ei28","name":"窗簾盒","unit":"尺","qty":6.9,"price":300,"note":""},{"id":"ei29","name":"壁掛空調盒","unit":"口","qty":1,"price":2000,"note":""},{"id":"ei30","name":"木作層板兩層","unit":"尺","qty":10.6,"price":500,"note":""},{"id":"ei31","name":"木作格柵","unit":"支","qty":3,"price":4000,"note":""}]}],"materials":[]},{"id":"m4","projectName":"寶輝國際莊園","address":"","unitNo":"","date":"","protection":[{"id":"bp1","name":"公共區域保護工程","unit":"式","qty":1,"price":0,"note":""},{"id":"bp2","name":"室內木地板保護","unit":"坪","qty":27.4,"price":650,"note":""},{"id":"bp3","name":"廚房PP板保護","unit":"式","qty":1,"price":1200,"note":""},{"id":"bp4","name":"完工保護拆除及垃圾清運費","unit":"式","qty":1,"price":20000,"note":"2車"}],"spaces":[{"id":"bs1","name":"輕隔間工程","items":[{"id":"bi0","name":"至頂乾式輕隔間牆(封雙層板)","unit":"坪","qty":3.4,"price":5500,"note":""}]},{"id":"bs2","name":"公共區域天花板","items":[{"id":"bi1","name":"木作造型天花板-表面噴漆","unit":"坪","qty":14.5,"price":3600,"note":""},{"id":"bi2","name":"窗簾盒垂板內崁鋁條燈","unit":"尺","qty":13.3,"price":400,"note":""},{"id":"bi3","name":"收納櫃上方天花板燈槽內崁鋁條燈","unit":"尺","qty":16.3,"price":300,"note":""},{"id":"bi4","name":"玄關天花板燈槽內崁鋁條燈","unit":"尺","qty":11.3,"price":300,"note":""},{"id":"bi5","name":"吧檯天花板燈槽內崁鋁條燈","unit":"尺","qty":6,"price":300,"note":""},{"id":"bi6","name":"休閒區天花板燈槽內崁鋁條燈","unit":"尺","qty":15,"price":300,"note":""},{"id":"bi7","name":"廚房天花板燈槽內崁鋁條燈","unit":"尺","qty":11.4,"price":300,"note":""},{"id":"bi8","name":"空調設備維修孔","unit":"口","qty":4,"price":1000,"note":""},{"id":"bi9","name":"空調無邊框線型出風孔開孔","unit":"M","qty":8.4,"price":800,"note":""},{"id":"bi10","name":"盒燈燈具打板開孔","unit":"口","qty":1,"price":200,"note":""},{"id":"bi11","name":"預埋吊畫軌道","unit":"尺","qty":13.5,"price":100,"note":""},{"id":"bi12","name":"吊畫繩","unit":"條","qty":2,"price":0,"note":""}]},{"id":"bs3","name":"公共區域牆面櫃體","items":[{"id":"bi13","name":"玄關T型隔間牆","unit":"尺","qty":11.8,"price":1000,"note":""},{"id":"bi14","name":"電箱牆面+電箱隱藏門","unit":"尺","qty":3.4,"price":1300,"note":""},{"id":"bi15","name":"餐廳、休閒區立牆","unit":"尺","qty":8.5,"price":800,"note":""},{"id":"bi16","name":"玄關鞋櫃","unit":"尺","qty":6.7,"price":7000,"note":"五金-川湖三節式緩衝滑軌、通風片"},{"id":"bi17","name":"玄關吊櫃","unit":"尺","qty":4.5,"price":4000,"note":"五金-川湖內建緩衝絞鍊、通風片"},{"id":"bi18","name":"玄關抽屜懸空矮櫃","unit":"尺","qty":6.2,"price":4500,"note":"五金-川湖內建緩衝絞鍊、川湖三節式緩衝滑軌、通風片"},{"id":"bi19","name":"客廳展示收納櫃","unit":"尺","qty":16.2,"price":7000,"note":"五金-川湖內建緩衝絞鍊、川湖三節式緩衝滑軌"},{"id":"bi20","name":"吧檯餐吊櫃","unit":"尺","qty":7.7,"price":3500,"note":""},{"id":"bi21","name":"吧檯餐矮櫃","unit":"尺","qty":6.1,"price":4500,"note":"五金-川湖內建緩衝絞鍊"}]},{"id":"bs4","name":"女兒房","items":[{"id":"bi22","name":"木作造型天花板-表面噴漆","unit":"坪","qty":2.9,"price":3600,"note":""},{"id":"bi23","name":"窗簾盒垂板內崁鋁條燈","unit":"尺","qty":6.3,"price":350,"note":""},{"id":"bi24","name":"床頭天花板燈槽內崁鋁條燈","unit":"尺","qty":9.6,"price":300,"note":""},{"id":"bi25","name":"空調設備維修孔","unit":"口","qty":1,"price":1000,"note":""},{"id":"bi26","name":"空調無邊框線型出風孔開孔","unit":"M","qty":1.2,"price":800,"note":""},{"id":"bi27","name":"預埋拉門軌道","unit":"尺","qty":9.8,"price":300,"note":""},{"id":"bi28","name":"女兒房衣櫃桶身","unit":"尺","qty":4.9,"price":3000,"note":""},{"id":"bi29","name":"女兒房隱藏式門扇框-表面噴漆","unit":"樘","qty":1,"price":16000,"note":""},{"id":"bi30","name":"五金-英國KANSWAY自動回歸緩衝絞鍊","unit":"組","qty":1,"price":1510,"note":""},{"id":"bi31","name":"五金-門鎖、把手(設計師自備)","unit":"組","qty":1,"price":0,"note":""},{"id":"bi32","name":"五金-門擋(設計師自備)","unit":"組","qty":1,"price":0,"note":"原報價2800/組"}]},{"id":"bs5","name":"兒子房","items":[{"id":"bi33","name":"木作造型天花板-表面噴漆","unit":"坪","qty":2.7,"price":3600,"note":""},{"id":"bi34","name":"窗簾盒垂板+燈槽內鋁條燈","unit":"尺","qty":17.7,"price":300,"note":""},{"id":"bi35","name":"空調設備維修孔","unit":"口","qty":1,"price":1000,"note":""},{"id":"bi36","name":"空調無邊框線型出風孔開孔","unit":"M","qty":2.6,"price":800,"note":""},{"id":"bi37","name":"預埋拉門軌道","unit":"尺","qty":9.8,"price":300,"note":""},{"id":"bi38","name":"兒子房衣櫃桶身","unit":"尺","qty":4.9,"price":3000,"note":""},{"id":"bi39","name":"兒子房隱藏式門扇框","unit":"樘","qty":1,"price":16000,"note":""},{"id":"bi40","name":"五金-英國KANSWAY自動回歸緩衝絞鍊","unit":"組","qty":1,"price":1510,"note":""},{"id":"bi41","name":"五金-門鎖、把手(設計師自備)","unit":"組","qty":1,"price":0,"note":""},{"id":"bi42","name":"五金-門擋(設計師自備)","unit":"組","qty":1,"price":0,"note":"原報價2800/組"}]},{"id":"bs6","name":"主臥室、更衣室","items":[{"id":"bi43","name":"木作造型天花板-表面噴漆","unit":"坪","qty":5.9,"price":3600,"note":""},{"id":"bi44","name":"窗簾盒內崁鋁條燈","unit":"尺","qty":20,"price":300,"note":""},{"id":"bi45","name":"天花板燈槽內崁鋁條燈","unit":"尺","qty":45.7,"price":300,"note":""},{"id":"bi46","name":"空調設備維修孔","unit":"口","qty":1,"price":1000,"note":""},{"id":"bi47","name":"空調無邊框線型出風孔開孔","unit":"M","qty":3.3,"price":800,"note":""},{"id":"bi48","name":"預埋拉門軌道","unit":"尺","qty":5,"price":300,"note":""},{"id":"bi49","name":"主臥室隱藏式門扇框-表面噴漆","unit":"樘","qty":1,"price":16000,"note":""},{"id":"bi50","name":"五金-英國KANSWAY自動回歸緩衝絞鍊","unit":"組","qty":1,"price":1510,"note":""},{"id":"bi51","name":"五金-門鎖、把手(設計師自備)","unit":"組","qty":1,"price":0,"note":""},{"id":"bi52","name":"五金-門擋(設計師自備)","unit":"組","qty":1,"price":0,"note":"原報價2800/組"},{"id":"bi53","name":"木作更衣室立牆-表面噴漆","unit":"式","qty":1,"price":4000,"note":""},{"id":"bi54","name":"更衣室L型底座+層板","unit":"尺","qty":11.3,"price":2000,"note":""},{"id":"bi55","name":"更衣室穿衣鏡","unit":"式","qty":1,"price":2500,"note":""}]},{"id":"bs7","name":"以下追加","items":[{"id":"bi56","name":"客廳圓形造型","unit":"式","qty":1,"price":7500,"note":""},{"id":"bi57","name":"女兒房圓形造型","unit":"式","qty":1,"price":2850,"note":""},{"id":"bi58","name":"客浴新增門片","unit":"組","qty":1,"price":6000,"note":""},{"id":"bi59","name":"客浴五金","unit":"組","qty":1,"price":1510,"note":""},{"id":"bi60","name":"梯廳保護","unit":"式","qty":1,"price":4500,"note":""},{"id":"bi61","name":"碳化角材、全室板材更換F1等級","unit":"式","qty":1,"price":50000,"note":""}]}],"materials":[]},{"id":"m5","projectName":"皇普莊園","address":"","unitNo":"D2-20","date":"2025-12-04","protection":[{"id":"hp1","name":"公設保護","unit":"坪","qty":26,"price":350,"note":""},{"id":"hp2","name":"廢設角材","unit":"式","qty":1,"price":1200,"note":""},{"id":"hp3","name":"完工保護拆除及垃圾清運費","unit":"式","qty":1,"price":10000,"note":""}],"spaces":[{"id":"hs1","name":"公共區域天花板","items":[{"id":"hi1","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":7.3,"price":3300,"note":"永新三合一角材、6mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"},{"id":"hi2","name":"包樑、包管天花板","unit":"尺","qty":31,"price":300,"note":""},{"id":"hi3","name":"天花板鋁條燈","unit":"尺","qty":12,"price":150,"note":""},{"id":"hi4","name":"壁掛空調冷氣帽","unit":"口","qty":1,"price":1800,"note":""},{"id":"hi5","name":"維修孔","unit":"口","qty":2,"price":1000,"note":""},{"id":"hi6","name":"電視牆-正面","unit":"尺","qty":6.7,"price":2500,"note":""},{"id":"hi7","name":"電視牆-側牆","unit":"尺","qty":4.7,"price":800,"note":""},{"id":"hi8","name":"電視牆-木作貼皮隔間牆","unit":"尺","qty":2,"price":2500,"note":""}]},{"id":"hs2","name":"廚所","items":[{"id":"hi9","name":"天花板拆除、平釘香柏","unit":"式","qty":1,"price":10000,"note":""},{"id":"hi10","name":"衛浴門及門框改色","unit":"式","qty":1,"price":6500,"note":""}]},{"id":"hs3","name":"主臥房天花板","items":[{"id":"hi11","name":"木作平釘天花板-表面噴漆","unit":"坪","qty":3.9,"price":3300,"note":"永新三合一角材、6mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"},{"id":"hi12","name":"包樑、包管天花板","unit":"尺","qty":10.3,"price":300,"note":""},{"id":"hi13","name":"壁掛空調冷氣帽","unit":"口","qty":1,"price":1800,"note":""}]}],"materials":[]}],
+  "崧城室內設計": [{"id":"sc1","projectName":"登陽森濤","address":"","unitNo":"10B2","date":"2026-04-27","protection":[{"id":"sc1p1","name":"公社保護","unit":"坪","qty":45,"price":850,"note":""},{"id":"sc1p2","name":"室內保護","unit":"坪","qty":17,"price":350,"note":""},{"id":"sc1p3","name":"垃圾清運","unit":"式","qty":1,"price":13000,"note":""}],"spaces":[{"id":"sc1s1","name":"牆面貼板","items":[{"id":"sc1i1","name":"沙發背牆面貼矽酸鈣板","unit":"坪","qty":2.6,"price":1400,"note":""},{"id":"sc1i2","name":"次臥室面貼矽酸鈣板","unit":"坪","qty":1.9,"price":1400,"note":""},{"id":"sc1i3","name":"主臥室電視牆面貼矽酸鈣板","unit":"坪","qty":1.2,"price":1400,"note":""},{"id":"sc1i4","name":"餐邊櫃牆面貼矽酸鈣板","unit":"坪","qty":1.6,"price":1400,"note":""}]},{"id":"sc1s2","name":"餐廳","items":[{"id":"sc1i5","name":"餐邊櫃牆面貼KD木皮板（含側面鏡子邊框）","unit":"式","qty":1,"price":18000,"note":"高度超過8尺"}]},{"id":"sc1s3","name":"浴室","items":[{"id":"sc1i6","name":"浴室牆面含拉門軌道盒","unit":"式","qty":1,"price":3500,"note":""},{"id":"sc1i7","name":"浴室拉門面貼KD木皮板","unit":"式","qty":1,"price":18000,"note":""},{"id":"sc1i8","name":"拉門緩衝五金","unit":"式","qty":1,"price":3500,"note":""}]},{"id":"sc1s4","name":"其他","items":[{"id":"sc1i9","name":"安裝洗碗機","unit":"式","qty":1,"price":500,"note":""}]}],"materials":[]},{"id":"sc2","projectName":"富宇新杜拜","address":"","unitNo":"5樓","date":"2026-04-29","protection":[{"id":"sc2p1","name":"室外保護","unit":"坪","qty":39,"price":350,"note":""},{"id":"sc2p2","name":"室內保護","unit":"坪","qty":16,"price":350,"note":""},{"id":"sc2p3","name":"垃圾清運","unit":"式","qty":1,"price":13000,"note":""}],"spaces":[{"id":"sc2s1","name":"天花板","items":[{"id":"sc2i1","name":"冷氣盒","unit":"尺","qty":26.7,"price":300,"note":""}]},{"id":"sc2s2","name":"客廳","items":[{"id":"sc2i2","name":"玄關造型牆","unit":"式","qty":1,"price":5000,"note":""},{"id":"sc2i3","name":"造型牆接續牆面","unit":"尺","qty":2.8,"price":1100,"note":""},{"id":"sc2i4","name":"電視牆（平面部分）","unit":"尺","qty":8.3,"price":1800,"note":""},{"id":"sc2i5","name":"電視牆（格柵造型）","unit":"尺","qty":2.5,"price":3300,"note":""},{"id":"sc2i6","name":"造型貼皮雙面隔間","unit":"式","qty":1,"price":15550,"note":""},{"id":"sc2i7","name":"木作矮櫃","unit":"尺","qty":7.4,"price":3800,"note":""},{"id":"sc2i8","name":"牆面層板","unit":"尺","qty":13.6,"price":1000,"note":""}]},{"id":"sc2s3","name":"主臥室","items":[{"id":"sc2i9","name":"主臥單面隔間含雙弧造型","unit":"尺","qty":7,"price":2000,"note":""}]}],"materials":[]},{"id":"sc3","projectName":"高鐵青田","address":"","unitNo":"","date":"","protection":[{"id":"sc3p1","name":"室內外保護","unit":"坪","qty":48,"price":350,"note":""},{"id":"sc3p2","name":"室內門框保護（含門片）","unit":"樘","qty":5,"price":1000,"note":""},{"id":"sc3p3","name":"室內天花板拆除清運","unit":"式","qty":1,"price":12000,"note":""},{"id":"sc3p4","name":"垃圾清運","unit":"式","qty":1,"price":13000,"note":""}],"spaces":[{"id":"sc3s1","name":"天花板","items":[{"id":"sc3i1","name":"冷氣窗簾盒","unit":"尺","qty":17,"price":600,"note":""},{"id":"sc3i2","name":"一般冷氣盒","unit":"尺","qty":20,"price":300,"note":""},{"id":"sc3i3","name":"木作包樑","unit":"尺","qty":36,"price":300,"note":""}]},{"id":"sc3s2","name":"追加項","items":[{"id":"sc3i4","name":"追加垃圾清運及維修門","unit":"式","qty":1,"price":2000,"note":""}]}],"materials":[]},{"id":"sc4","projectName":"一月春語","address":"太和一街123號11-3","unitNo":"11-3","date":"","protection":[{"id":"sc4p1","name":"保護工程","unit":"式","qty":1,"price":18000,"note":""},{"id":"sc4p2","name":"拆除清運","unit":"式","qty":1,"price":8500,"note":""}],"spaces":[{"id":"sc4s1","name":"木作工程","items":[{"id":"sc4i1","name":"鋼琴鍵洞洞板","unit":"式","qty":1,"price":16520,"note":""},{"id":"sc4i2","name":"安裝工資","unit":"式","qty":1,"price":1500,"note":""}]}],"materials":[]},{"id":"sc5","projectName":"遠雄幸福成","address":"","unitNo":"","date":"","protection":[{"id":"sc5p1","name":"梯廳保護","unit":"坪","qty":19,"price":850,"note":"已更新坪數"},{"id":"sc5p2","name":"室內保護","unit":"坪","qty":11,"price":350,"note":""},{"id":"sc5p3","name":"木作清運（含保護拆除）","unit":"式","qty":1,"price":8500,"note":""}],"spaces":[{"id":"sc5s1","name":"天花板","items":[{"id":"sc5i1","name":"平釘天花板","unit":"坪","qty":11,"price":3000,"note":""},{"id":"sc5i2","name":"冷氣窗簾盒","unit":"尺","qty":21,"price":600,"note":""},{"id":"sc5i3","name":"包樑（次臥）","unit":"尺","qty":6,"price":300,"note":""},{"id":"sc5i4","name":"包樑（客廳）","unit":"尺","qty":30,"price":250,"note":"新增"}]}],"materials":[]},{"id":"sc6","projectName":"后科1時代","address":"","unitNo":"","date":"","protection":[{"id":"sc6p1","name":"室內保護","unit":"坪","qty":16,"price":200,"note":""},{"id":"sc6p2","name":"垃圾清運","unit":"式","qty":1,"price":5000,"note":""}],"spaces":[{"id":"sc6s1","name":"天花板","items":[{"id":"sc6i1","name":"冷氣窗簾盒","unit":"尺","qty":21,"price":650,"note":""},{"id":"sc6i2","name":"包管","unit":"尺","qty":15,"price":300,"note":""},{"id":"sc6i3","name":"補貼","unit":"式","qty":1,"price":3500,"note":""}]}],"materials":[]},{"id":"sc7","projectName":"松築盛築","address":"","unitNo":"","date":"2025-11-28","protection":[{"id":"sc7p1","name":"室內外保護","unit":"坪","qty":43,"price":350,"note":""},{"id":"sc7p2","name":"門片保護","unit":"組","qty":2,"price":1500,"note":""},{"id":"sc7p3","name":"木工垃圾清運(含保護拆除)","unit":"式","qty":1,"price":13000,"note":""}],"spaces":[{"id":"sc7s1","name":"天花板","items":[{"id":"sc7i1","name":"平釘天花板","unit":"坪","qty":17,"price":3200,"note":""},{"id":"sc7i2","name":"假樑","unit":"尺","qty":25,"price":300,"note":""},{"id":"sc7i3","name":"冷氣窗簾盒","unit":"尺","qty":19,"price":600,"note":""},{"id":"sc7i4","name":"封頂冷氣盒","unit":"尺","qty":7.5,"price":300,"note":""},{"id":"sc7i5","name":"一般封頂","unit":"尺","qty":9.5,"price":300,"note":""},{"id":"sc7i6","name":"單面隔間造型牆","unit":"尺","qty":7.5,"price":800,"note":""},{"id":"sc7i7","name":"造型面貼樂木皮板","unit":"式","qty":1,"price":3000,"note":""},{"id":"sc7i8","name":"弧形包樑","unit":"尺","qty":23,"price":400,"note":""}]}],"materials":[]},{"id":"sc8","projectName":"豐原匯","address":"","unitNo":"","date":"","protection":[{"id":"sc8p1","name":"保護","unit":"坪","qty":58,"price":400,"note":""},{"id":"sc8p2","name":"垃圾清運","unit":"式","qty":1,"price":13000,"note":""}],"spaces":[{"id":"sc8s1","name":"天花板","items":[{"id":"sc8i1","name":"平釘天花板","unit":"坪","qty":15,"price":3300,"note":""},{"id":"sc8i2","name":"包樑","unit":"尺","qty":47,"price":350,"note":""},{"id":"sc8i3","name":"冷氣盒","unit":"尺","qty":16,"price":350,"note":""},{"id":"sc8i4","name":"冷氣窗簾盒","unit":"尺","qty":10,"price":650,"note":""},{"id":"sc8i5","name":"洞洞板（含桿子8尺、層板2平）","unit":"式","qty":1,"price":5000,"note":""},{"id":"sc8i6","name":"鋁條燈","unit":"尺","qty":9,"price":150,"note":""}]}],"materials":[]}],
+  "九央室內設計": [{"id":"jy1","projectName":"台中-工妍院2","address":"","unitNo":"","date":"2025-02-22","protection":[{"id":"jyp1","name":"電梯內保護","unit":"式","qty":1,"price":1800,"note":"最薄大陸板+PP板"},{"id":"jyp2","name":"整樓電梯槽保護","unit":"式","qty":5,"price":1000,"note":"最薄大陸板+PP板"},{"id":"jyp3","name":"1F地坪保護","unit":"坪","qty":12,"price":450,"note":"最薄大陸板+PP板"},{"id":"jyp4","name":"1-2F樓梯保護","unit":"坪","qty":1.9,"price":500,"note":"最薄大陸板+PP板"},{"id":"jyp5","name":"2F廚具保護","unit":"式","qty":1,"price":800,"note":"最薄大陸板+PP板"},{"id":"jyp6","name":"2F地坪保護","unit":"坪","qty":12,"price":450,"note":"最薄大陸板+PP板"},{"id":"jyp7","name":"2-3F樓梯保護","unit":"坪","qty":2.2,"price":500,"note":"最薄大陸板+PP板"},{"id":"jyp8","name":"3F地坪保護","unit":"坪","qty":9.5,"price":450,"note":"最薄大陸板+PP板"},{"id":"jyp9","name":"3-4F樓梯保護","unit":"坪","qty":2.2,"price":500,"note":"最薄大陸板+PP板"},{"id":"jyp10","name":"4F地坪保護","unit":"坪","qty":9.4,"price":450,"note":"最薄大陸板+PP板"},{"id":"jyp11","name":"4-5F樓梯保護","unit":"坪","qty":2.2,"price":500,"note":"最薄大陸板+PP板"},{"id":"jyp12","name":"5F地坪保護","unit":"坪","qty":6.3,"price":450,"note":"最薄大陸板+PP板"},{"id":"jyp13","name":"房間門保護","unit":"式","qty":5,"price":400,"note":"最薄大陸板+PP板"},{"id":"jyp14","name":"垃圾清運","unit":"車","qty":2,"price":8000,"note":""}],"spaces":[{"id":"jys1","name":"1F車庫天花板","items":[{"id":"jyi1","name":"木作平釘天花板-面噴漆","unit":"坪","qty":3.7,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jyi2","name":"包樑","unit":"尺","qty":16,"price":450,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jyi3","name":"木作鏡框","unit":"尺","qty":3.2,"price":2000,"note":"永新F3集成角材"},{"id":"jyi4","name":"車庫入口L型造型框","unit":"尺","qty":23,"price":1000,"note":"樂維-LV7275正黑"},{"id":"jyi5","name":"櫃體牆面整面單面封板","unit":"坪","qty":3.7,"price":4000,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jyi6","name":"櫃體邊端景ㄇ型框","unit":"尺","qty":4.5,"price":1400,"note":"樂維-LV7275正黑"}]},{"id":"jys2","name":"2F客廳、餐廳、公共走道、廚房天花板","items":[{"id":"jyi7","name":"木作造型天花板-面噴漆","unit":"坪","qty":12,"price":5733,"note":"永新F3集成角材、6mm淺野矽酸鈣板"}]},{"id":"jys3","name":"2F客廳、餐廳、公共走道、廚房櫃體牆板","items":[{"id":"jyi8","name":"沙發背牆木作造型封板","unit":"尺","qty":17,"price":1000,"note":"面貼美耐板-威盛亞-D92-03鎢灰"},{"id":"jyi9","name":"沙發背牆邊木作局部封板","unit":"尺","qty":2.7,"price":1000,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jyi10","name":"樓梯木作修飾","unit":"樘","qty":1,"price":15000,"note":"面烤漆"},{"id":"jyi11","name":"樓梯雙面隔間","unit":"坪","qty":2.6,"price":5500,"note":"永新F3集成角材、9mm淺野矽酸鈣板"},{"id":"jyi12","name":"木作餐櫃","unit":"尺","qty":12,"price":6800,"note":"面烤漆"},{"id":"jyi13","name":"木作中島","unit":"尺","qty":7.8,"price":4200,"note":"面烤漆"},{"id":"jyi14","name":"木作樓梯下方高櫃","unit":"尺","qty":6.2,"price":8500,"note":"面貼樂維-LV7286雲霧灰"},{"id":"jyi15","name":"電視牆左側柱子單面封板","unit":"尺","qty":4.2,"price":1500,"note":"面烤漆"},{"id":"jyi16","name":"電視牆單面封板/貼石材","unit":"尺","qty":9.6,"price":1000,"note":""},{"id":"jyi17","name":"木作電視牆下方平台","unit":"尺","qty":11,"price":500,"note":"面烤漆"},{"id":"jyi18","name":"木作電視牆矮櫃","unit":"尺","qty":6.4,"price":1500,"note":"面烤漆"}]},{"id":"jys4","name":"3F主臥室天花板","items":[{"id":"jyi19","name":"木作造型天花板-面噴漆","unit":"坪","qty":8.6,"price":3600,"note":"永新F3集成角材、6mm淺野矽酸鈣板"}]},{"id":"jys5","name":"3F主臥室櫃體牆板","items":[{"id":"jyi20","name":"廁所前整面木作單面封板(含暗門)","unit":"尺","qty":7.6,"price":2763,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jyi21","name":"化妝桌前木作壁面單面封板","unit":"尺","qty":6.8,"price":2800,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jyi22","name":"木作化妝桌","unit":"尺","qty":2.6,"price":2800,"note":"面貼北華安-P73亞麻布紋波耐板"},{"id":"jyi23","name":"雙面隔間","unit":"尺","qty":2,"price":2000,"note":"永新F3集成角材、9mm淺野矽酸鈣板"},{"id":"jyi24","name":"床頭木作造型壁板","unit":"尺","qty":14,"price":2800,"note":"美耐板樂維-LV1050希臘白石、塗料"},{"id":"jyi25","name":"衣櫃中間柱子單面封板","unit":"尺","qty":2.4,"price":1000,"note":"永新F3集成角材、6mm淺野矽酸鈣板"}]},{"id":"jys6","name":"4F孝親房天花板","items":[{"id":"jyi26","name":"木作造型天花板-面噴漆","unit":"坪","qty":4.5,"price":3600,"note":"永新F3集成角材、6mm淺野矽酸鈣板"}]},{"id":"jys7","name":"4F孝親房櫃體牆板","items":[{"id":"jyi27","name":"床頭木作造型矮壁板","unit":"尺","qty":12,"price":1500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jyi28","name":"床頭上方局部木格柵","unit":"尺","qty":1,"price":5000,"note":"噴漆處理"}]},{"id":"jys8","name":"4F次臥房天花板","items":[{"id":"jyi29","name":"木作平釘天花板-面噴漆","unit":"坪","qty":2.6,"price":3600,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jyi30","name":"木作冷氣包管+窗簾盒","unit":"尺","qty":10,"price":500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"}]},{"id":"jys9","name":"5F電競室天花板","items":[{"id":"jyi31","name":"木作造型天花板-面噴漆","unit":"坪","qty":3.2,"price":5400,"note":"永新F3集成角材、6mm淺野矽酸鈣板"}]},{"id":"jys10","name":"5F電競室櫃體牆板","items":[{"id":"jyi32","name":"木作造型電視牆","unit":"尺","qty":8.6,"price":3800,"note":"樂維-LV7275正黑"},{"id":"jyi33","name":"木作層板","unit":"尺","qty":8.6,"price":900,"note":"樂維-LV7275正黑"},{"id":"jyi34","name":"木作書桌+矮櫃","unit":"尺","qty":8.6,"price":5814,"note":"樂維-ZE7291UM玄黑"}]},{"id":"jys11","name":"5F舞蹈室天花板","items":[{"id":"jyi35","name":"木作造型天花板-面噴漆","unit":"坪","qty":1.9,"price":3600,"note":"永新F3集成角材、6mm淺野矽酸鈣板"}]}],"materials":[]},{"id":"jy2","projectName":"台中-國聚之見","address":"","unitNo":"","date":"2025-05-31","protection":[{"id":"jy2p1","name":"梯廳地坪","unit":"坪","qty":6,"price":550,"note":"1分夾板+PP"},{"id":"jy2p2","name":"車庫","unit":"坪","qty":2.5,"price":550,"note":"1分夾板+PP"},{"id":"jy2p3","name":"立面保護","unit":"坪","qty":13.3,"price":1200,"note":"2分夾板+角料"},{"id":"jy2p4","name":"室內地坪","unit":"尺","qty":21.6,"price":450,"note":"大陸板+PP"},{"id":"jy2p5","name":"廚具保護","unit":"式","qty":1,"price":800,"note":""},{"id":"jy2p6","name":"大門保護","unit":"式","qty":1,"price":500,"note":""},{"id":"jy2p7","name":"門組保護","unit":"組","qty":3,"price":500,"note":""},{"id":"jy2p8","name":"保護拆除+清運","unit":"式","qty":1,"price":18000,"note":""}],"spaces":[{"id":"jy2s1","name":"客廳、餐廳、公共走道、廚房－天花板","items":[{"id":"jy2i1","name":"木作平釘天花板-面噴漆","unit":"坪","qty":13.5,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板，表面塗料列於塗裝工程"},{"id":"jy2i2","name":"間接包樑","unit":"尺","qty":21.5,"price":300,"note":""},{"id":"jy2i3","name":"弧形造型+包樑","unit":"尺","qty":13.4,"price":500,"note":""},{"id":"jy2i4","name":"窗簾盒","unit":"尺","qty":15,"price":300,"note":""},{"id":"jy2i5","name":"出風口","unit":"尺","qty":11.9,"price":250,"note":""},{"id":"jy2i6","name":"維修口","unit":"組","qty":3,"price":1000,"note":""}]},{"id":"jy2s2","name":"客廳、餐廳、公共走道、廚房－櫃體牆板","items":[{"id":"jy2i7","name":"玄關木作鞋櫃","unit":"尺","qty":4.1,"price":7500,"note":"面貼木皮"},{"id":"jy2i8","name":"玄關木作假門片壁板","unit":"尺","qty":4.1,"price":2800,"note":"面貼木皮"},{"id":"jy2i9","name":"電視牆木作玄關吊櫃","unit":"尺","qty":5.94,"price":7000,"note":"面貼木皮"},{"id":"jy2i10","name":"木作造型電視牆","unit":"尺","qty":13.7,"price":1300,"note":"面仿石皮美耐板框收尾"},{"id":"jy2i11","name":"木作電視矮平台","unit":"尺","qty":18.6,"price":700,"note":"面貼磁磚"},{"id":"jy2i12","name":"木作電視牆局部壁面封板","unit":"尺","qty":18.6,"price":400,"note":"面塗料"},{"id":"jy2i13","name":"玄關隔間下方藏LED燈","unit":"尺","qty":2.2,"price":2000,"note":"面噴漆"},{"id":"jy2i14","name":"餐廳吊櫃","unit":"尺","qty":3.8,"price":3500,"note":"面貼木皮"},{"id":"jy2i15","name":"餐廳矮櫃","unit":"尺","qty":3.8,"price":4000,"note":"面塗料"},{"id":"jy2i16","name":"餐廳高櫃","unit":"尺","qty":2,"price":7000,"note":"面貼木皮"},{"id":"jy2i17","name":"過道木作造型壁面","unit":"尺","qty":12.5,"price":2200,"note":"面貼木皮"},{"id":"jy2i18","name":"木作客廳與書房間矮隔屏","unit":"尺","qty":9.4,"price":2500,"note":"面貼木皮"},{"id":"jy2i19","name":"木作書桌","unit":"尺","qty":8.3,"price":1200,"note":"面貼木皮"},{"id":"jy2i20","name":"木作書桌矮櫃","unit":"尺","qty":2,"price":3500,"note":"面貼木皮"},{"id":"jy2i21","name":"書房木作吊櫃","unit":"尺","qty":8.3,"price":7500,"note":"面塗料"}]},{"id":"jy2s3","name":"主臥室－天花板","items":[{"id":"jy2i22","name":"木作平釘天花板-面噴漆","unit":"坪","qty":3.3,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jy2i23","name":"窗簾盒","unit":"尺","qty":10.8,"price":300,"note":""},{"id":"jy2i24","name":"包樑","unit":"尺","qty":8.7,"price":300,"note":""},{"id":"jy2i25","name":"冷氣包管","unit":"尺","qty":8.6,"price":400,"note":""}]},{"id":"jy2s4","name":"主臥室－櫃體壁板","items":[{"id":"jy2i26","name":"木作床頭造型壁板","unit":"尺","qty":7.9,"price":2000,"note":"面貼木皮"},{"id":"jy2i27","name":"木作床頭置物層板","unit":"尺","qty":1,"price":1800,"note":"面貼木皮"},{"id":"jy2i28","name":"床尾衣櫃","unit":"尺","qty":6.6,"price":7400,"note":"面貼木皮"}]},{"id":"jy2s5","name":"次臥房－天花板","items":[{"id":"jy2i29","name":"木作平釘天花板-面噴漆","unit":"坪","qty":2.7,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jy2i30","name":"冷氣包管","unit":"尺","qty":5.2,"price":400,"note":""},{"id":"jy2i31","name":"窗簾盒","unit":"尺","qty":5.2,"price":300,"note":""}]},{"id":"jy2s6","name":"更衣室－天花板","items":[{"id":"jy2i32","name":"木作平釘天花板-面噴漆","unit":"坪","qty":2.7,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jy2i33","name":"窗簾盒","unit":"尺","qty":6.2,"price":300,"note":""},{"id":"jy2i34","name":"包樑","unit":"尺","qty":15.8,"price":300,"note":""},{"id":"jy2i35","name":"冷氣包管","unit":"尺","qty":9.3,"price":400,"note":""}]},{"id":"jy2s7","name":"更衣室－櫃體壁板","items":[{"id":"jy2i36","name":"木作衣櫃","unit":"尺","qty":10.06,"price":9300,"note":"面貼木皮"}]}],"materials":[]},{"id":"jy3","projectName":"台中-磐興寬心6F-A1","address":"","unitNo":"6F-A1","date":"2025-05-28","protection":[{"id":"jy3p1","name":"梯廳地坪","unit":"坪","qty":6,"price":550,"note":"大陸板+PP+防潮布"},{"id":"jy3p2","name":"車庫","unit":"坪","qty":2.5,"price":550,"note":"大陸板+PP+防潮布"},{"id":"jy3p3","name":"立面保護","unit":"坪","qty":13,"price":1200,"note":"2分夾板+角料"},{"id":"jy3p4","name":"室內地坪","unit":"尺","qty":23,"price":450,"note":"大陸板+PP"},{"id":"jy3p5","name":"廚具保護","unit":"式","qty":1,"price":800,"note":""},{"id":"jy3p6","name":"大門保護","unit":"式","qty":1,"price":500,"note":""},{"id":"jy3p7","name":"門組保護","unit":"組","qty":3,"price":500,"note":""},{"id":"jy3p8","name":"垃圾清運+拆除","unit":"式","qty":1,"price":18000,"note":""}],"spaces":[{"id":"jy3s1","name":"客廳、餐廳、公共走道、廚房－天花板","items":[{"id":"jy3i1","name":"木作平釘天花板+面噴漆","unit":"坪","qty":14,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板，表面塗料列於塗裝工程"},{"id":"jy3i2","name":"間接包樑","unit":"尺","qty":26,"price":300,"note":""},{"id":"jy3i3","name":"窗簾盒","unit":"尺","qty":17,"price":300,"note":""},{"id":"jy3i4","name":"廚房上方包樑","unit":"尺","qty":11,"price":450,"note":""}]},{"id":"jy3s2","name":"客廳、餐廳、公共走道、廚房－櫃體牆板","items":[{"id":"jy3i5","name":"玄關木作曲線造型隔屏","unit":"尺","qty":3.1,"price":6000,"note":"面塗料"},{"id":"jy3i6","name":"玄關木作展示層板","unit":"尺","qty":1.1,"price":1000,"note":"面塗料"},{"id":"jy3i7","name":"玄關電箱滑軌門片","unit":"樘","qty":1,"price":3200,"note":"面塗料"},{"id":"jy3i8","name":"客廳木作造型電視高櫃","unit":"尺","qty":5.6,"price":7000,"note":"面塗料"},{"id":"jy3i9","name":"木作餐桌木作打底","unit":"尺","qty":6.9,"price":1300,"note":"面貼磁磚"},{"id":"jy3i10","name":"客廳木作造型電視底板","unit":"尺","qty":13,"price":2000,"note":"面塗料+木皮"},{"id":"jy3i11","name":"客廳木作電視牆下方矮平台","unit":"尺","qty":19,"price":700,"note":"面貼磁磚"},{"id":"jy3i12","name":"客廳木作曲線造型壁板","unit":"尺","qty":1,"price":7500,"note":"面塗料"},{"id":"jy3i13","name":"書房木作造型桌吊抽","unit":"尺","qty":1.6,"price":3000,"note":"面包膜"},{"id":"jy3i14","name":"書房木作局部隔間牆","unit":"尺","qty":1.3,"price":1500,"note":"面油漆"},{"id":"jy3i15","name":"書房木作高櫃","unit":"尺","qty":4.6,"price":8500,"note":"面包膜"},{"id":"jy3i16","name":"書房與客廳之間矮隔屏","unit":"尺","qty":13,"price":500,"note":"面塗料"}]},{"id":"jy3s3","name":"主臥室－天花板","items":[{"id":"jy3i17","name":"木作平釘天花板-面噴漆","unit":"坪","qty":4.3,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jy3i18","name":"窗簾盒","unit":"尺","qty":9.7,"price":300,"note":""},{"id":"jy3i19","name":"包樑","unit":"尺","qty":32,"price":300,"note":""},{"id":"jy3i20","name":"冷氣包管","unit":"尺","qty":7.9,"price":400,"note":""}]},{"id":"jy3s4","name":"主臥室－櫃體壁板","items":[{"id":"jy3i21","name":"木作化妝抽屜","unit":"尺","qty":3.5,"price":3000,"note":"面貼木皮"},{"id":"jy3i22","name":"木作床頭矮背板","unit":"尺","qty":13,"price":1800,"note":"面貼木皮"},{"id":"jy3i23","name":"木作床架高底板","unit":"座","qty":1,"price":30000,"note":"面貼木皮"}]},{"id":"jy3s5","name":"次臥房－天花板","items":[{"id":"jy3i24","name":"木作平釘天花板-面噴漆","unit":"坪","qty":2.9,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jy3i25","name":"冷氣包管","unit":"尺","qty":5.5,"price":400,"note":""},{"id":"jy3i26","name":"包樑","unit":"尺","qty":11,"price":300,"note":""}]},{"id":"jy3s6","name":"倉廚－天花板","items":[{"id":"jy3i27","name":"木作平釘天花板-面噴漆","unit":"坪","qty":1.5,"price":3500,"note":"永新F3集成角材、6mm淺野矽酸鈣板"},{"id":"jy3i28","name":"床頭包樑","unit":"尺","qty":12,"price":300,"note":""},{"id":"jy3i29","name":"冷氣包管","unit":"尺","qty":12,"price":400,"note":""},{"id":"jy3i30","name":"窗簾盒","unit":"尺","qty":8,"price":300,"note":""},{"id":"jy3i31","name":"維修孔","unit":"口","qty":3,"price":1000,"note":""},{"id":"jy3i32","name":"天花板-圓形","unit":"只","qty":1,"price":3000,"note":""},{"id":"jy3i33","name":"天花板-圓弧形","unit":"尺","qty":17,"price":500,"note":""},{"id":"jy3i34","name":"出風口","unit":"尺","qty":8.5,"price":250,"note":""},{"id":"jy3i35","name":"出風口","unit":"尺","qty":13,"price":250,"note":""}]}],"materials":[]}],
+  "其他": [{"id":"ot1","projectName":"錦華街60號","address":"","unitNo":"","date":"2026-04-25","protection":[],"spaces":[{"id":"ot1s1","name":"二樓臥室","items":[{"id":"ot1i1","name":"平釘天花板","unit":"坪","qty":9.5,"price":3600,"note":"永新三合一角材、6mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"},{"id":"ot1i2","name":"衣櫃(不含抽屜)","unit":"尺","qty":7.2,"price":6500,"note":""},{"id":"ot1i3","name":"衣櫃(含抽屜)","unit":"尺","qty":3.8,"price":7500,"note":""}]},{"id":"ot1s2","name":"二樓小房間","items":[{"id":"ot1i4","name":"平釘天花板","unit":"坪","qty":3.5,"price":3600,"note":"永新三合一角材、6mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"}]},{"id":"ot1s3","name":"二樓公共空間","items":[{"id":"ot1i5","name":"雙面隔間","unit":"坪","qty":2.9,"price":5500,"note":"永新三合一角材、9mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"},{"id":"ot1i6","name":"衣櫃","unit":"尺","qty":11.4,"price":9000,"note":"高9.4尺"},{"id":"ot1i7","name":"樓梯上方收納浴櫃","unit":"尺","qty":4,"price":3500,"note":""},{"id":"ot1i8","name":"門框","unit":"樘","qty":2,"price":1000,"note":""},{"id":"ot1i9","name":"木纖門","unit":"片","qty":2,"price":2600,"note":"含水平鎖、後紐、門檔"}]},{"id":"ot1s4","name":"三樓儲藏室","items":[{"id":"ot1i10","name":"雙面隔間","unit":"坪","qty":10,"price":5500,"note":"永新三合一角材、9mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"},{"id":"ot1i11","name":"平釘天花板","unit":"坪","qty":17.4,"price":3800,"note":"永新三合一角材、6mm國產南亞矽酸鈣板，表面油漆列於塗裝工程"},{"id":"ot1i12","name":"門框","unit":"樘","qty":2,"price":1000,"note":""},{"id":"ot1i13","name":"木纖門","unit":"片","qty":1,"price":2600,"note":"含水平鎖、後紐、門檔"},{"id":"ot1i14","name":"實木門","unit":"片","qty":1,"price":6500,"note":"含水平鎖、後紐、門檔"}]},{"id":"ot1s5","name":"地板工程","items":[{"id":"ot1i15","name":"卡扣地板","unit":"坪","qty":26.8,"price":3200,"note":""},{"id":"ot1i16","name":"區隔條","unit":"條","qty":3,"price":500,"note":""},{"id":"ot1i17","name":"運費","unit":"式","qty":1,"price":1500,"note":""}]},{"id":"ot1s6","name":"其他","items":[{"id":"ot1i18","name":"垃圾清運","unit":"式","qty":1,"price":6000,"note":""}]}],"materials":[]}],
+};
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+const fmt = (n) => Number(n || 0).toLocaleString("zh-TW");
+const itemTotal = (i) => (i.qty || 0) * (i.price || 0);
+const protTotal = (arr) => arr.reduce((s, i) => s + itemTotal(i), 0);
+const spaceTotal = (sp) => sp.items.reduce((s, i) => s + itemTotal(i), 0);
+const matTotal = (arr) => (arr || []).reduce((s, i) => s + itemTotal(i), 0);
+const grandTotal = (q) => protTotal(q.protection) + q.spaces.reduce((s, sp) => s + spaceTotal(sp), 0);
+
+function newItem() { return { id: uid(), name: "", unit: "尺", qty: 0, price: 0, note: "" }; }
+function newQuote() {
+  return {
+    id: uid(), projectName: "", address: "", unitNo: "",
+    date: new Date().toISOString().slice(0, 10),
+    protection: DEFAULT_PROTECTION.map(p => ({ ...p, id: uid() })),
+    spaces: [{ id: uid(), name: "天花板", items: [newItem()] }],
+    materials: [],
+  };
+}
+
+function App() {
+  const [data, setData] = useState(SEED_DATA);
+  const [screen, setScreen] = useState("home");
+  const [activeCompany, setActiveCompany] = useState(null);
+  const [activeQuoteId, setActiveQuoteId] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
+
+  const quotes = activeCompany ? (data[activeCompany] || []) : [];
+  const activeQuote = quotes.find(q => q.id === activeQuoteId) || null;
+
+  const saveQuote = (q) => {
+    setData(d => {
+      const list = d[activeCompany] || [];
+      const idx = list.findIndex(x => x.id === q.id);
+      return { ...d, [activeCompany]: idx >= 0 ? list.map(x => x.id === q.id ? q : x) : [...list, q] };
+    });
+    setActiveQuoteId(q.id);
+    setScreen("quote");
+  };
+
+  const deleteQuote = (id) => {
+    setData(d => ({ ...d, [activeCompany]: (d[activeCompany] || []).filter(q => q.id !== id) }));
+    setScreen("company");
+  };
+
+  return (
+    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "#F7F4F0", fontFamily: "'Noto Sans TC','PingFang TC',sans-serif" }}>
+      {screen === "home" && <HomeScreen data={data} onSelect={c => { setActiveCompany(c); setScreen("company"); }} />}
+      {screen === "company" && <CompanyScreen company={activeCompany} quotes={quotes} onBack={() => setScreen("home")} onSelect={id => { setActiveQuoteId(id); setScreen("quote"); }} onNew={() => { setEditTarget(null); setScreen("edit"); }} />}
+      {screen === "quote" && activeQuote && <QuoteScreen quote={activeQuote} company={activeCompany} onBack={() => setScreen("company")} onEdit={() => { setEditTarget(activeQuote); setScreen("edit"); }} onDelete={() => deleteQuote(activeQuote.id)} />}
+      {screen === "edit" && <EditScreen initial={editTarget} onSave={saveQuote} onCancel={() => setScreen(editTarget ? "quote" : "company")} />}
+    </div>
+  );
+}
+
+function HomeScreen({ data, onSelect }) {
+  const total = Object.values(data).reduce((s, a) => s + a.length, 0);
+  return (
+    <div style={{ paddingBottom: 32 }}>
+      <div style={{ background: "#1C3F6E", padding: "48px 24px 28px" }}>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", letterSpacing: 3, marginBottom: 6 }}>木作工程</div>
+        <div style={{ fontSize: 26, fontWeight: 700, color: "#fff", marginBottom: 4 }}>估價管理系統</div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>共 {total} 份估價單</div>
+      </div>
+      <div style={{ padding: "20px 16px 0" }}>
+        <div style={{ fontSize: 11, color: "#9C948D", letterSpacing: 2, marginBottom: 12 }}>設計公司</div>
+        {COMPANIES.map(c => {
+          const count = (data[c] || []).length;
+          const latest = (data[c] || []).slice(-1)[0];
+          return (
+            <div key={c} onClick={() => onSelect(c)} style={{ background: "#fff", borderRadius: 10, padding: "16px 18px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", cursor: "pointer" }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#1A1714", marginBottom: 3 }}>{c}</div>
+                <div style={{ fontSize: 12, color: "#9C948D" }}>{count > 0 ? `${count} 份估價單　最新：${latest?.projectName}` : "尚無估價單"}</div>
+              </div>
+              <div style={{ fontSize: 20, color: "#C8C0B8" }}>›</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CompanyScreen({ company, quotes, onBack, onSelect, onNew }) {
+  return (
+    <div style={{ paddingBottom: 32 }}>
+      <TopBar title={company} onBack={onBack} />
+      <div style={{ padding: "16px 16px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ fontSize: 11, color: "#9C948D", letterSpacing: 2 }}>估價單列表（{quotes.length} 份）</div>
+          <button onClick={onNew} style={{ background: "#1C3F6E", color: "#fff", border: "none", borderRadius: 6, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>＋ 新增</button>
+        </div>
+        {quotes.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "#9C948D" }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
+            <div style={{ fontSize: 14 }}>尚無估價單</div>
+          </div>
+        ) : (
+          quotes.slice().reverse().map(q => {
+            const total = grandTotal(q);
+            const mTotal = matTotal(q.materials);
+            return (
+              <div key={q.id} onClick={() => onSelect(q.id)} style={{ background: "#fff", borderRadius: 10, padding: "16px 18px", marginBottom: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", cursor: "pointer" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1714", marginBottom: 4 }}>{q.projectName}</div>
+                    <div style={{ fontSize: 12, color: "#9C948D" }}>{[q.address, q.unitNo && `戶別 ${q.unitNo}`, q.date].filter(Boolean).join("　")}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1C3F6E" }}>NT$ {fmt(total)}</div>
+                    {mTotal > 0 && <div style={{ fontSize: 11, color: "#A07840", marginTop: 2 }}>木皮 NT$ {fmt(mTotal)}</div>}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QuoteScreen({ quote, company, onBack, onEdit, onDelete }) {
+  const [expanded, setExpanded] = useState(() => {
+    const init = { protection: true, materials: false };
+    quote.spaces.forEach(sp => { init[sp.id] = true; });
+    return init;
+  });
+  const toggle = (key) => setExpanded(p => ({ ...p, [key]: !p[key] }));
+  const [showDel, setShowDel] = useState(false);
+
+  const pTotal = protTotal(quote.protection);
+  const total = grandTotal(quote);
+  const mTotal = matTotal(quote.materials);
+
+  const handlePrint = () => {
+    const w = window.open("", "_blank");
+    w.document.write(`<html><head><title>${quote.projectName} 工程報價單</title>
+    <style>
+      body{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#111;margin:24px;max-width:800px}
+      h2{font-size:20px;text-align:center;margin-bottom:6px;letter-spacing:4px}
+      .meta{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:16px;font-size:12px;color:#555;border-bottom:2px solid #333;padding-bottom:8px}
+      table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px}
+      th{background:#EAEAEA;padding:6px 8px;text-align:left;border:1px solid #ccc;font-size:11px}
+      th.r,td.r{text-align:right}
+      td{padding:5px 8px;border:1px solid #e0e0e0;vertical-align:top}
+      .sec{background:#D8E4F0;font-weight:700;padding:7px 10px;font-size:13px;border:1px solid #b0c4d8}
+      .sec-c{background:#F5EDD8;font-weight:700;padding:7px 10px;font-size:13px;border:1px solid #E0C898}
+      .space{background:#F5F5F5;font-weight:600;font-size:11px;color:#555;padding:5px 8px;border:1px solid #ddd}
+      .sub{text-align:right;font-weight:600;background:#FAFAFA;padding:5px 8px;border:1px solid #e0e0e0}
+      .grand{text-align:right;font-size:16px;font-weight:700;padding:10px 8px;border-top:2px solid #333;margin-top:4px}
+      .mat-note{font-size:11px;color:#888;text-align:right;padding:4px 8px}
+    </style></head><body>
+    <h2>工 程 報 價 單</h2>
+    <div class="meta">
+      <span>案件名稱：<strong>${quote.projectName}</strong></span>
+      ${quote.address ? `<span>地址：${quote.address}</span>` : ""}
+      ${quote.unitNo ? `<span>戶別：${quote.unitNo}</span>` : ""}
+      <span>報價日期：${quote.date}</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>名稱及規格</th><th>單位</th><th class="r">數量</th><th class="r">單價</th><th class="r">總價</th><th>備註</th></tr></thead>
+      <tbody>
+        <tr><td colspan="7" class="sec">A　保護工程</td></tr>
+        ${quote.protection.map((item,i) => `<tr><td>${i+1}</td><td>${item.name}</td><td>${item.unit}</td><td class="r">${item.qty}</td><td class="r">${fmt(item.price)}</td><td class="r">${fmt(itemTotal(item))}</td><td>${item.note||""}</td></tr>`).join("")}
+        <tr><td colspan="5" class="sub">保護工程 合計</td><td class="sub">NT$ ${fmt(pTotal)}</td><td></td></tr>
+        <tr><td colspan="7" class="sec">B　木作工程</td></tr>
+        ${quote.spaces.map(sp => {
+          const st = spaceTotal(sp);
+          return `<tr><td colspan="7" class="space">　${sp.name}</td></tr>
+            ${sp.items.map((item,i) => `<tr><td>${i+1}</td><td>${item.name}</td><td>${item.unit}</td><td class="r">${item.qty}</td><td class="r">${fmt(item.price)}</td><td class="r">${fmt(itemTotal(item))}</td><td>${item.note||""}</td></tr>`).join("")}
+            <tr><td colspan="5" class="sub">${sp.name} 小計</td><td class="sub">NT$ ${fmt(st)}</td><td></td></tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+    <div class="grand">A、B項總計　NT$ ${fmt(total)}</div>
+    ${mTotal > 0 ? `
+    <table style="margin-top:16px">
+      <thead><tr><th>#</th><th>名稱及規格</th><th>單位</th><th class="r">數量</th><th class="r">單價</th><th class="r">總價</th><th>備註</th></tr></thead>
+      <tbody>
+        <tr><td colspan="7" class="sec-c">C　木皮材料費（另付設計公司）</td></tr>
+        ${(quote.materials||[]).map((item,i) => `<tr><td>${i+1}</td><td>${item.name}</td><td>${item.unit}</td><td class="r">${item.qty}</td><td class="r">${fmt(item.price)}</td><td class="r">${fmt(itemTotal(item))}</td><td>${item.note||""}</td></tr>`).join("")}
+        <tr><td colspan="5" class="sub">木皮材料費 小計</td><td class="sub">NT$ ${fmt(mTotal)}</td><td></td></tr>
+      </tbody>
+    </table>
+    <div class="mat-note">※ 木皮材料費另付設計公司，不含於工程報價總計內</div>` : ""}
+    </body></html>`);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 400);
+  };
+
+  return (
+    <div style={{ paddingBottom: 40 }}>
+      <TopBar title={quote.projectName} onBack={onBack} />
+      <div style={{ margin: "16px 16px 0", background: "#1C3F6E", borderRadius: 12, padding: "18px 20px", color: "#fff" }}>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 2 }}>{company}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{quote.projectName}</div>
+        <div style={{ display: "flex", gap: 16, fontSize: 12, color: "rgba(255,255,255,0.7)", flexWrap: "wrap" }}>
+          {quote.address && <span>📍 {quote.address}</span>}
+          {quote.unitNo && <span>戶別 {quote.unitNo}</span>}
+          <span>📅 {quote.date}</span>
+        </div>
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>A、B項總計</span>
+            <span style={{ fontSize: 24, fontWeight: 700 }}>NT$ {fmt(total)}</span>
+          </div>
+          {mTotal > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+              <span style={{ fontSize: 11, color: "rgba(255,200,100,0.8)" }}>C 木皮材料費（另付設計公司）</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,200,100,0.9)" }}>NT$ {fmt(mTotal)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ margin: "12px 16px", display: "flex", gap: 8 }}>
+        <ActionBtn onClick={handlePrint} color="#2B5F8E" flex={2}>匯出 PDF</ActionBtn>
+        <ActionBtn onClick={onEdit} color="#A07840" flex={2}>編輯</ActionBtn>
+        <ActionBtn onClick={() => setShowDel(true)} color="#C0392B" flex={1}>刪除</ActionBtn>
+      </div>
+
+      {showDel && (
+        <div style={{ margin: "0 16px 12px", background: "#FDECEA", border: "1px solid #F5C6C2", borderRadius: 10, padding: "14px 16px" }}>
+          <div style={{ fontSize: 14, color: "#C0392B", fontWeight: 600, marginBottom: 10 }}>確定要刪除這份估價單？</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <ActionBtn onClick={onDelete} color="#C0392B" flex={1}>確定刪除</ActionBtn>
+            <ActionBtn onClick={() => setShowDel(false)} color="#6B635C" flex={1}>取消</ActionBtn>
+          </div>
+        </div>
+      )}
+
+      <div style={{ padding: "4px 16px 0" }}>
+        <SectionBlock label="A　保護工程" total={pTotal} expanded={expanded.protection} onToggle={() => toggle("protection")}>
+          {quote.protection.map((item, i) => <ItemRow key={item.id} index={i+1} item={item} />)}
+        </SectionBlock>
+
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#1C3F6E", background: "#E8F0F8", borderRadius: 8, padding: "8px 14px", marginBottom: 8 }}>B　木作工程</div>
+        {quote.spaces.map(sp => (
+          <SectionBlock key={sp.id} label={sp.name} total={spaceTotal(sp)} expanded={expanded[sp.id]} onToggle={() => toggle(sp.id)} sub>
+            {sp.items.map((item, i) => <ItemRow key={item.id} index={i+1} item={item} />)}
+          </SectionBlock>
+        ))}
+
+        {mTotal > 0 && (
+          <>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#A07840", background: "#FBF6EE", borderRadius: 8, padding: "8px 14px", marginBottom: 8, marginTop: 4 }}>
+              C　木皮材料費　<span style={{ fontSize: 11, fontWeight: 400, color: "#B89060" }}>（另付設計公司）</span>
+            </div>
+            <SectionBlock label="木皮材料明細" total={mTotal} expanded={expanded.materials} onToggle={() => toggle("materials")} gold>
+              {(quote.materials || []).map((item, i) => <ItemRow key={item.id} index={i+1} item={item} />)}
+            </SectionBlock>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SectionBlock({ label, total, expanded, onToggle, children, sub, gold }) {
+  const headerBg = gold ? "#FBF6EE" : sub ? "#FAFAF8" : "#EEF4FB";
+  const textColor = gold ? "#A07840" : "#1C3F6E";
+  return (
+    <div style={{ background: "#fff", borderRadius: 10, marginBottom: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      <div onClick={onToggle} style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", background: headerBg }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: sub ? "#1A1714" : textColor }}>{label}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: textColor }}>NT$ {fmt(total)}</span>
+          <span style={{ fontSize: 14, color: "#9C948D", transform: expanded ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
+        </div>
+      </div>
+      {expanded && <div style={{ padding: "4px 0 8px" }}>{children}</div>}
+    </div>
+  );
+}
+
+function ItemRow({ index, item }) {
+  const total = itemTotal(item);
+  return (
+    <div style={{ padding: "10px 16px", borderBottom: "1px solid #F5F2EE" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: item.note ? 4 : 0 }}>
+        <div style={{ flex: 1, paddingRight: 12 }}>
+          <span style={{ fontSize: 11, color: "#C8C0B8", marginRight: 6 }}>{index}.</span>
+          <span style={{ fontSize: 14, color: "#1A1714" }}>{item.name}</span>
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: 13, color: "#4A4440", marginBottom: 2 }}>{item.qty} {item.unit} × {fmt(item.price)}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: total > 0 ? "#1C3F6E" : "#9C948D" }}>{total > 0 ? `NT$ ${fmt(total)}` : "—"}</div>
+        </div>
+      </div>
+      {item.note && <div style={{ fontSize: 11, color: "#6B635C", paddingLeft: 18, lineHeight: 1.5 }}>{item.note}</div>}
+    </div>
+  );
+}
+
+function ActionBtn({ children, onClick, color, flex = 1 }) {
+  return (
+    <button onClick={onClick} style={{ flex, padding: "10px 0", background: color, color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{children}</button>
+  );
+}
+
+function EditScreen({ initial, onSave, onCancel }) {
+  const [form, setForm] = useState(() => initial ? JSON.parse(JSON.stringify(initial)) : newQuote());
+
+  const setMeta = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setProtItem = (id, k, v) => setForm(f => ({ ...f, protection: f.protection.map(p => p.id === id ? { ...p, [k]: ["qty","price"].includes(k) ? parseFloat(v)||0 : v } : p) }));
+  const addProtItem = () => setForm(f => ({ ...f, protection: [...f.protection, { id: uid(), name: "", unit: "式", qty: 1, price: 0, note: "" }] }));
+  const delProtItem = (id) => setForm(f => ({ ...f, protection: f.protection.filter(p => p.id !== id) }));
+
+  const addSpace = () => setForm(f => ({ ...f, spaces: [...f.spaces, { id: uid(), name: "", items: [newItem()] }] }));
+  const delSpace = (sid) => setForm(f => ({ ...f, spaces: f.spaces.filter(s => s.id !== sid) }));
+  const setSpaceName = (sid, v) => setForm(f => ({ ...f, spaces: f.spaces.map(s => s.id === sid ? { ...s, name: v } : s) }));
+  const addItem = (sid) => setForm(f => ({ ...f, spaces: f.spaces.map(s => s.id === sid ? { ...s, items: [...s.items, newItem()] } : s) }));
+  const delItem = (sid, iid) => setForm(f => ({ ...f, spaces: f.spaces.map(s => s.id === sid ? { ...s, items: s.items.filter(i => i.id !== iid) } : s) }));
+  const setItem = (sid, iid, k, v) => setForm(f => ({ ...f, spaces: f.spaces.map(s => s.id === sid ? { ...s, items: s.items.map(i => i.id === iid ? { ...i, [k]: ["qty","price"].includes(k) ? parseFloat(v)||0 : v } : i) } : s) }));
+
+  const setMatItem = (id, k, v) => setForm(f => ({ ...f, materials: (f.materials||[]).map(m => m.id === id ? { ...m, [k]: ["qty","price"].includes(k) ? parseFloat(v)||0 : v } : m) }));
+  const addMatItem = () => setForm(f => ({ ...f, materials: [...(f.materials||[]), { id: uid(), name: "", unit: "張", qty: 0, price: 0, note: "" }] }));
+  const delMatItem = (id) => setForm(f => ({ ...f, materials: (f.materials||[]).filter(m => m.id !== id) }));
+
+  const total = grandTotal(form);
+  const mTotal = matTotal(form.materials);
+  const isValid = form.projectName.trim().length > 0;
+
+  return (
+    <div style={{ paddingBottom: 120 }}>
+      <TopBar title={initial ? "編輯估價單" : "新增估價單"} onBack={onCancel} />
+      <div style={{ padding: "16px 16px 0" }}>
+        <EditCard label="案場資訊">
+          <EditField label="案件名稱 *" value={form.projectName} onChange={v => setMeta("projectName", v)} placeholder="例：南悅豐映2A3" />
+          <EditField label="地址" value={form.address} onChange={v => setMeta("address", v)} placeholder="地址（選填）" />
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><EditField label="戶別" value={form.unitNo} onChange={v => setMeta("unitNo", v)} placeholder="例：9A" /></div>
+            <div style={{ flex: 1 }}><EditField label="報價日期" type="date" value={form.date} onChange={v => setMeta("date", v)} /></div>
+          </div>
+        </EditCard>
+
+        <EditCard label="A　保護工程">
+          {form.protection.map((item, i) => <EditItemBlock key={item.id} item={item} index={i+1} onSet={(k,v) => setProtItem(item.id,k,v)} onDel={() => delProtItem(item.id)} />)}
+          <AddRowBtn onClick={addProtItem} label="新增保護項目" />
+          <TotalRow label="保護工程 合計" total={protTotal(form.protection)} />
+        </EditCard>
+
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#1C3F6E", background: "#E8F0F8", borderRadius: 8, padding: "8px 14px", marginBottom: 10 }}>B　木作工程</div>
+        {form.spaces.map(sp => (
+          <EditCard key={sp.id} label={
+            <input value={sp.name} onChange={e => setSpaceName(sp.id, e.target.value)} placeholder="空間名稱（例：主臥室）"
+              style={{ border: "none", background: "transparent", fontSize: 14, fontWeight: 700, color: "#1A1714", fontFamily: "inherit", outline: "none", width: "100%" }} />
+          } onDelete={() => delSpace(sp.id)}>
+            {sp.items.map((item, i) => <EditItemBlock key={item.id} item={item} index={i+1} onSet={(k,v) => setItem(sp.id,item.id,k,v)} onDel={() => delItem(sp.id,item.id)} />)}
+            <AddRowBtn onClick={() => addItem(sp.id)} label="新增工項" />
+            <TotalRow label={`${sp.name||"此空間"} 小計`} total={spaceTotal(sp)} />
+          </EditCard>
+        ))}
+        <button onClick={addSpace} style={{ width: "100%", padding: "12px", background: "#fff", border: "2px dashed #C8C0B8", borderRadius: 10, fontSize: 14, color: "#6B635C", cursor: "pointer", fontFamily: "inherit", marginBottom: 12 }}>＋ 新增空間</button>
+
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#A07840", background: "#FBF6EE", borderRadius: 8, padding: "8px 14px", marginBottom: 10 }}>
+          C　木皮材料費 <span style={{ fontSize: 11, fontWeight: 400 }}>（另付設計公司）</span>
+        </div>
+        <EditCard label="木皮材料明細">
+          {(form.materials||[]).map((item, i) => <EditItemBlock key={item.id} item={item} index={i+1} onSet={(k,v) => setMatItem(item.id,k,v)} onDel={() => delMatItem(item.id)} />)}
+          <AddRowBtn onClick={addMatItem} label="新增材料項目" />
+          <TotalRow label="木皮材料費 小計" total={mTotal} gold />
+        </EditCard>
+      </div>
+
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: "1px solid #E2DDD8", padding: "12px 16px", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: mTotal > 0 ? 4 : 8 }}>
+          <span style={{ fontSize: 12, color: "#9C948D" }}>A、B項總計</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#1C3F6E" }}>NT$ {fmt(total)}</span>
+        </div>
+        {mTotal > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 11, color: "#A07840" }}>C 木皮材料費</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#A07840" }}>NT$ {fmt(mTotal)}</span>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "12px", background: "#F7F4F0", border: "1px solid #E2DDD8", borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#6B635C" }}>取消</button>
+          <button onClick={() => { if (isValid) onSave(form); }} style={{ flex: 2, padding: "12px", background: isValid ? "#1C3F6E" : "#C8C0B8", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: isValid ? "pointer" : "not-allowed", fontFamily: "inherit", color: "#fff" }}>
+            {isValid ? "儲存估價單" : "請輸入案件名稱"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditCard({ label, children, onDelete }) {
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, marginBottom: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      <div style={{ padding: "10px 16px", borderBottom: "1px solid #F0ECE8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {typeof label === "string" ? <span style={{ fontSize: 13, fontWeight: 700, color: "#1C3F6E" }}>{label}</span> : label}
+        {onDelete && <button onClick={onDelete} style={{ background: "#FDECEA", border: "none", color: "#C0392B", fontSize: 11, padding: "3px 8px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}>刪除空間</button>}
+      </div>
+      <div style={{ padding: "12px 16px" }}>{children}</div>
+    </div>
+  );
+}
+
+function EditField({ label, value, onChange, placeholder, type = "text" }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: "#9C948D", marginBottom: 4 }}>{label}</div>
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E2DDD8", borderRadius: 6, padding: "10px 12px", fontSize: 15, fontFamily: "inherit", background: "#FAFAF8", outline: "none", color: "#1A1714" }} />
+    </div>
+  );
+}
+
+function EditItemBlock({ item, index, onSet, onDel }) {
+  return (
+    <div style={{ borderBottom: "1px solid #F5F2EE", paddingBottom: 12, marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <span style={{ fontSize: 11, color: "#9C948D" }}>項目 {index}</span>
+        <button onClick={onDel} style={{ background: "none", border: "none", color: "#C0392B", fontSize: 18, cursor: "pointer", lineHeight: 1, padding: "0 4px" }}>×</button>
+      </div>
+      <input value={item.name} onChange={e => onSet("name", e.target.value)} placeholder="項目名稱"
+        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E2DDD8", borderRadius: 6, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", background: "#FAFAF8", outline: "none", marginBottom: 8 }} />
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 10, color: "#9C948D", marginBottom: 3 }}>單位</div>
+          <select value={item.unit} onChange={e => onSet("unit", e.target.value)}
+            style={{ width: "100%", border: "1px solid #E2DDD8", borderRadius: 6, padding: "9px 8px", fontSize: 14, fontFamily: "inherit", background: "#FAFAF8", outline: "none" }}>
+            {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 10, color: "#9C948D", marginBottom: 3 }}>數量</div>
+          <input type="number" value={item.qty} onChange={e => onSet("qty", e.target.value)}
+            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E2DDD8", borderRadius: 6, padding: "9px 10px", fontSize: 14, fontFamily: "inherit", background: "#FAFAF8", outline: "none", textAlign: "right" }} />
+        </div>
+        <div style={{ flex: 1.4 }}>
+          <div style={{ fontSize: 10, color: "#9C948D", marginBottom: 3 }}>單價</div>
+          <input type="number" value={item.price} onChange={e => onSet("price", e.target.value)}
+            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E2DDD8", borderRadius: 6, padding: "9px 10px", fontSize: 14, fontFamily: "inherit", background: "#FAFAF8", outline: "none", textAlign: "right" }} />
+        </div>
+      </div>
+      <div style={{ fontSize: 12, color: "#1C3F6E", fontWeight: 600, textAlign: "right", marginBottom: 6 }}>小計：NT$ {fmt(itemTotal(item))}</div>
+      <input value={item.note} onChange={e => onSet("note", e.target.value)} placeholder="備註（選填）"
+        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E2DDD8", borderRadius: 6, padding: "8px 12px", fontSize: 13, fontFamily: "inherit", background: "#FAFAF8", outline: "none", color: "#6B635C" }} />
+    </div>
+  );
+}
+
+function AddRowBtn({ onClick, label }) {
+  return (
+    <button onClick={onClick} style={{ width: "100%", padding: "9px", background: "#F7F4F0", border: "1px dashed #C8C0B8", borderRadius: 6, fontSize: 13, color: "#6B635C", cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>＋ {label}</button>
+  );
+}
+
+function TotalRow({ label, total, gold }) {
+  return (
+    <div style={{ textAlign: "right", paddingTop: 4, fontSize: 13, color: gold ? "#A07840" : "#6B635C" }}>
+      {label}　<strong style={{ color: gold ? "#A07840" : "#1C3F6E" }}>NT$ {fmt(total)}</strong>
+    </div>
+  );
+}
+
+function TopBar({ title, onBack }) {
+  return (
+    <div style={{ background: "#fff", borderBottom: "1px solid #E2DDD8", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", fontSize: 20, color: "#1C3F6E", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>‹</button>
+      <span style={{ fontSize: 16, fontWeight: 700, color: "#1A1714" }}>{title}</span>
+    </div>
+  );
+}
+
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
