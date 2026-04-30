@@ -307,6 +307,75 @@ function CompanyScreen({ company, quotes, onBack, onSelect, onNew }) {
   );
 }
 
+
+    function DesignDrawing({ quoteId }) {
+      const [uploading, setUploading] = React.useState(false);
+      const [fileUrl, setFileUrl] = React.useState(null);
+      const [loading, setLoading] = React.useState(true);
+      const fileRef = React.useRef();
+
+      React.useEffect(() => { loadFile(); }, [quoteId]);
+
+      const loadFile = async () => {
+        setLoading(true);
+        try {
+          const { data } = await supabase.storage.from("designs").list(quoteId);
+          if (data && data.length > 0) {
+            const { data: urlData } = supabase.storage.from("designs").getPublicUrl(quoteId + "/" + data[0].name);
+            setFileUrl(urlData.publicUrl);
+          } else { setFileUrl(null); }
+        } catch(e) { setFileUrl(null); }
+        setLoading(false);
+      };
+
+      const handleUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+          const { data: existing } = await supabase.storage.from("designs").list(quoteId);
+          if (existing && existing.length > 0) {
+            await supabase.storage.from("designs").remove(existing.map(f => quoteId + "/" + f.name));
+          }
+          const ext = file.name.split(".").pop();
+          const path = quoteId + "/design." + ext;
+          await supabase.storage.from("designs").upload(path, file);
+          const { data: urlData } = supabase.storage.from("designs").getPublicUrl(path);
+          setFileUrl(urlData.publicUrl);
+        } catch(e) { alert("上傳失敗，請再試一次"); }
+        setUploading(false);
+      };
+
+      const handleDelete = async () => {
+        if (!confirm("確定要刪除設計圖嗎？")) return;
+        const { data: existing } = await supabase.storage.from("designs").list(quoteId);
+        if (existing && existing.length > 0) {
+          await supabase.storage.from("designs").remove(existing.map(f => quoteId + "/" + f.name));
+        }
+        setFileUrl(null);
+      };
+
+      if (loading) return null;
+
+      return (
+        <div style={{ margin: "0 16px 12px", background: "#fff", borderRadius: 10, padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#1C3F6E", marginBottom: 10 }}>📐 設計圖</div>
+          {fileUrl ? (
+            <div style={{ display: "flex", gap: 8 }}>
+              <ActionBtn onClick={() => window.open(fileUrl, "_blank")} color="#2E7D52" flex={3}>查看設計圖</ActionBtn>
+              <ActionBtn onClick={() => fileRef.current.click()} color="#A07840" flex={2}>{uploading ? "上傳中..." : "更換"}</ActionBtn>
+              <ActionBtn onClick={handleDelete} color="#C0392B" flex={1}>刪除</ActionBtn>
+            </div>
+          ) : (
+            <ActionBtn onClick={() => fileRef.current.click()} color="#1C3F6E" flex={1}>
+              {uploading ? "上傳中..." : "＋ 上傳設計圖"}
+            </ActionBtn>
+          )}
+          <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: "none" }} onChange={handleUpload} />
+        </div>
+      );
+    }
+
 function QuoteScreen({ quote, company, onBack, onEdit, onDelete }) {
   const [expanded, setExpanded] = useState(() => {
     const init = { protection: true, materials: false };
@@ -655,6 +724,7 @@ function TopBar({ title, onBack }) {
 }
 
     
+    // Override App with Supabase-enabled version
     function AppWithDB() {
       const [data, setData] = useState(null);
       const [loading, setLoading] = useState(true);
@@ -663,34 +733,45 @@ function TopBar({ title, onBack }) {
       const [activeQuoteId, setActiveQuoteId] = useState(null);
       const [editTarget, setEditTarget] = useState(null);
 
-      useEffect(() => { loadData(); }, []);
+      useEffect(() => {
+        loadData();
+      }, []);
 
       const loadData = async () => {
         setLoading(true);
         const { data: rows, error } = await supabase.from("quotes").select("*");
         if (error) {
+          console.error(error);
+          // fallback to seed data
           setData(SEED_DATA);
         } else if (rows && rows.length > 0) {
+          // reconstruct data from DB
           const reconstructed = {};
           COMPANIES.forEach(c => reconstructed[c] = []);
           rows.forEach(row => {
-            if (reconstructed[row.company]) reconstructed[row.company].push(row.data);
+            if (reconstructed[row.company]) {
+              reconstructed[row.company].push(row.data);
+            }
           });
           setData(reconstructed);
         } else {
+          // first time: seed the DB with initial data
           const inserts = [];
           COMPANIES.forEach(company => {
             (SEED_DATA[company] || []).forEach(quote => {
               inserts.push({ id: quote.id, company, data: quote });
             });
           });
-          if (inserts.length > 0) await supabase.from("quotes").insert(inserts);
+          if (inserts.length > 0) {
+            await supabase.from("quotes").insert(inserts);
+          }
           setData(SEED_DATA);
         }
         setLoading(false);
       };
 
       const saveQuote = async (q) => {
+        // upsert to DB
         await supabase.from("quotes").upsert({ id: q.id, company: activeCompany, data: q });
         setData(d => {
           const list = d[activeCompany] || [];
@@ -703,11 +784,6 @@ function TopBar({ title, onBack }) {
 
       const deleteQuote = async (id) => {
         await supabase.from("quotes").delete().eq("id", id);
-        // also delete design files
-        const { data: existing } = await supabase.storage.from("designs").list(id);
-        if (existing && existing.length > 0) {
-          await supabase.storage.from("designs").remove(existing.map(f => `${id}/${f.name}`));
-        }
         setData(d => ({ ...d, [activeCompany]: (d[activeCompany] || []).filter(q => q.id !== id) }));
         setScreen("company");
       };
