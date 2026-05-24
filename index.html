@@ -11,6 +11,8 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #F7F4F0; }
+    #root { min-height: 100vh; }
+    .app-shell { touch-action: pan-y; }
   </style>
 </head>
 <body>
@@ -25,7 +27,9 @@
     
 
 const COMPANIES = ["易構空間設計", "慕熙空間設計", "崧城室內設計", "九央室內設計", "其他"];
-const UNITS = ["坪", "尺", "支", "樘", "組", "式", "口", "片", "張"];
+const UNITS = ["坪", "尺", "支", "樘", "組", "式", "口", "片", "張", "條", "M", "車", "座", "只"];
+const PROTECTION_WORDS = ["保護", "梯廳", "車位", "大門", "門框", "電梯", "公設", "公共區域保護", "清運", "垃圾", "拆除"];
+const SPACE_WORDS = ["客廳", "餐廳", "玄關", "廚房", "走廊", "公共區域", "主臥", "主臥室", "次臥", "次臥室", "孝親房", "書房", "女兒房", "兒子房", "更衣室", "浴室", "陽台", "天花板", "追加", "追加項", "其他"];
 
 const DEFAULT_PROTECTION = [
   { id: "dp1", name: "室內地坪保護", unit: "坪", qty: 0, price: 650, note: "PP板+兩分夾板保護" },
@@ -193,6 +197,152 @@ const spaceTotal = (sp) => sp.items.reduce((s, i) => s + itemTotal(i), 0);
 const matTotal = (arr) => (arr || []).reduce((s, i) => s + itemTotal(i), 0);
 const grandTotal = (q) => protTotal(q.protection) + q.spaces.reduce((s, sp) => s + spaceTotal(sp), 0);
 
+function normalizeMemoText(text) {
+  return text
+    .replace(/[｜|]/g, " ")
+    .replace(/[，,]/g, " ")
+    .replace(/[：:]/g, ":")
+    .replace(/\t/g, " ");
+}
+
+function parseMemoMeta(line, quote) {
+  const clean = line.trim();
+  const value = clean.split(":").slice(1).join(":").trim();
+  if (/^(案名|案件|案件名稱|工程名稱)/.test(clean) && value) return { ...quote, projectName: value };
+  if (/^(地址|案場)/.test(clean) && value) return { ...quote, address: value };
+  if (/^(戶別|戶號)/.test(clean) && value) return { ...quote, unitNo: value };
+  if (/^(日期|報價日期)/.test(clean) && value) return { ...quote, date: value.replace(/\//g, "-") };
+  return quote;
+}
+
+function looksLikeMemoSpace(line) {
+  const clean = line.trim();
+  if (!clean || clean.length > 14) return false;
+  if (/\d/.test(clean)) return false;
+  return SPACE_WORDS.some(w => clean.includes(w));
+}
+
+function looksLikeMemoProjectName(line) {
+  const raw = normalizeMemoText(line).trim();
+  if (!raw || raw.length > 28) return false;
+  const unitPattern = UNITS.map(u => u.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  if (new RegExp("\\d+(?:\\.\\d+)?\\s*(" + unitPattern + ")").test(raw)) return false;
+  const numbers = [...raw.matchAll(/\d+(?:\.\d+)?/g)].map(m => Number(m[0]));
+  if (numbers.length === 0) return true;
+  return numbers.every(n => n < 1000) && !/\s/.test(raw);
+}
+
+function parseMemoLine(line) {
+  const raw = normalizeMemoText(line).trim();
+  if (!raw) return null;
+
+  const unitPattern = UNITS.map(u => u.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const qtyUnit = raw.match(new RegExp("(\\d+(?:\\.\\d+)?)\\s*(" + unitPattern + ")"));
+  const numbers = [...raw.matchAll(/\d+(?:\.\d+)?/g)];
+  if (numbers.length === 0) return null;
+
+  let qty = 1;
+  let unit = "式";
+  let priceMatch = numbers[numbers.length - 1];
+  let nameEnd = priceMatch.index;
+
+  if (qtyUnit) {
+    qty = parseFloat(qtyUnit[1]);
+    unit = qtyUnit[2];
+    const afterQty = numbers.filter(n => n.index > raw.indexOf(qtyUnit[0]));
+    priceMatch = afterQty.length ? afterQty[afterQty.length - 1] : numbers[numbers.length - 1];
+    nameEnd = raw.indexOf(qtyUnit[0]);
+  }
+
+  const price = parseFloat(priceMatch[0]) || 0;
+  const before = raw.slice(0, nameEnd).trim();
+  const afterPrice = raw.slice(priceMatch.index + priceMatch[0].length).trim();
+  const between = qtyUnit
+    ? raw.slice(raw.indexOf(qtyUnit[0]) + qtyUnit[0].length, priceMatch.index).trim()
+    : raw.slice(0, priceMatch.index).trim();
+  const name = (before || between || raw.replace(priceMatch[0], "")).trim();
+  if (!name) return null;
+
+  return { id: uid(), name, unit, qty, price, note: afterPrice };
+}
+
+function isMemoProtectionItem(item) {
+  return PROTECTION_WORDS.some(w => item.name.includes(w));
+}
+
+function parseMemoQuote(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let quote = {
+    id: uid(),
+    projectName: "",
+    address: "",
+    unitNo: "",
+    date: new Date().toISOString().slice(0, 10),
+    protection: [],
+    spaces: [],
+    materials: [],
+  };
+  let currentSpace = null;
+  const unresolved = [];
+
+  for (const originalLine of lines) {
+    const line = originalLine.replace(/^\s*[-*•]\s*/, "").trim();
+    if (!line) continue;
+
+    if (/:/.test(normalizeMemoText(line))) {
+      const nextQuote = parseMemoMeta(normalizeMemoText(line), quote);
+      if (nextQuote !== quote) {
+        quote = nextQuote;
+        continue;
+      }
+    }
+
+    if (!quote.projectName && looksLikeMemoProjectName(line) && !looksLikeMemoSpace(line)) {
+      quote.projectName = line;
+      continue;
+    }
+
+    const sectionLine = line.replace(/[\[\]【】]/g, "");
+    if (/^A\s*保護|保護工程/.test(sectionLine)) {
+      currentSpace = null;
+      continue;
+    }
+    if (/^B\s*木作|木作工程/.test(sectionLine)) continue;
+
+    if (looksLikeMemoSpace(line)) {
+      currentSpace = { id: uid(), name: line, items: [] };
+      quote.spaces.push(currentSpace);
+      continue;
+    }
+
+    const item = parseMemoLine(line);
+    if (!item) {
+      unresolved.push(line);
+      continue;
+    }
+
+    if (isMemoProtectionItem(item) && !currentSpace) {
+      quote.protection.push(item);
+      continue;
+    }
+
+    if (isMemoProtectionItem(item) && quote.spaces.length === 0) {
+      quote.protection.push(item);
+      continue;
+    }
+
+    if (!currentSpace) {
+      currentSpace = { id: uid(), name: "木作工程", items: [] };
+      quote.spaces.push(currentSpace);
+    }
+    currentSpace.items.push(item);
+  }
+
+  if (!quote.projectName) quote.projectName = "未命名估價單";
+  quote.spaces = quote.spaces.filter(sp => sp.items.length > 0);
+  return { quote, unresolved };
+}
+
 function newItem() { return { id: uid(), name: "", unit: "尺", qty: 0, price: 0, note: "" }; }
 function newQuote() {
   return {
@@ -268,14 +418,17 @@ function HomeScreen({ data, onSelect }) {
   );
 }
 
-function CompanyScreen({ company, quotes, onBack, onSelect, onNew }) {
+function CompanyScreen({ company, quotes, onBack, onSelect, onNew, onImport }) {
   return (
     <div style={{ paddingBottom: 32 }}>
       <TopBar title={company} onBack={onBack} />
       <div style={{ padding: "16px 16px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={{ fontSize: 11, color: "#9C948D", letterSpacing: 2 }}>估價單列表（{quotes.length} 份）</div>
-          <button onClick={onNew} style={{ background: "#1C3F6E", color: "#fff", border: "none", borderRadius: 6, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>＋ 新增</button>
+          <div style={{ display: "flex", gap: 6 }}>
+            {onImport && <button onClick={onImport} style={{ background: "#2E7D52", color: "#fff", border: "none", borderRadius: 6, padding: "7px 10px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>備忘錄匯入</button>}
+            <button onClick={onNew} style={{ background: "#1C3F6E", color: "#fff", border: "none", borderRadius: 6, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>＋ 新增</button>
+          </div>
         </div>
         {quotes.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#9C948D" }}>
@@ -714,6 +867,125 @@ function TotalRow({ label, total, gold }) {
   );
 }
 
+function MemoImportScreen({ onBack, onSave }) {
+  const sampleText = `南悅豐映2A3
+
+保護20.4坪 650
+梯廳5.2坪 650
+清運18000
+
+客廳
+天花板7.7坪 3500
+窗簾盒13尺 450
+電視櫃10尺 6000
+
+主臥
+天花板4.5坪 3500
+衣櫃拉門22000
+滑軌3500`;
+  const [memoText, setMemoText] = useState(sampleText);
+  const [result, setResult] = useState(null);
+
+  const handlePreview = () => setResult(parseMemoQuote(memoText));
+  const handleSave = () => {
+    if (result?.quote) onSave(result.quote);
+  };
+
+  return (
+    <div style={{ paddingBottom: 40 }}>
+      <TopBar title="從備忘錄匯入" onBack={onBack} />
+      <div style={{ padding: "16px 16px 0" }}>
+        <textarea
+          value={memoText}
+          onChange={e => setMemoText(e.target.value)}
+          placeholder="把 iPhone 備忘錄內容貼在這裡"
+          style={{ width: "100%", minHeight: 260, resize: "vertical", border: "1px solid #E2DDD8", borderRadius: 10, padding: 12, fontSize: 14, lineHeight: 1.55, fontFamily: "inherit", background: "#fff", outline: "none", marginBottom: 10 }}
+        />
+        <ActionBtn onClick={handlePreview} color="#1C3F6E" flex={1}>判讀預覽</ActionBtn>
+
+        {result && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ background: "#fff", borderRadius: 10, padding: "14px 16px", marginBottom: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#1C3F6E", marginBottom: 8 }}>判讀結果</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>{result.quote.projectName}</div>
+              <div style={{ fontSize: 12, color: "#9C948D", marginBottom: 10 }}>{[result.quote.address, result.quote.unitNo && `戶別 ${result.quote.unitNo}`, result.quote.date].filter(Boolean).join("　")}</div>
+
+              <MemoPreviewSection title="A　保護工程" items={result.quote.protection} total={protTotal(result.quote.protection)} />
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#1C3F6E", background: "#E8F0F8", borderRadius: 8, padding: "8px 12px", margin: "10px 0 8px" }}>B　木作工程</div>
+              {result.quote.spaces.map(sp => <MemoPreviewSection key={sp.id} title={sp.name} items={sp.items} total={spaceTotal(sp)} sub />)}
+
+              <div style={{ marginTop: 12, textAlign: "right", fontSize: 18, fontWeight: 800, color: "#1C3F6E" }}>
+                總計 NT$ {fmt(grandTotal(result.quote))}
+              </div>
+            </div>
+
+            {result.unresolved.length > 0 && (
+              <div style={{ background: "#FFF7F5", border: "1px solid #F0C6BD", borderRadius: 10, padding: "12px 14px", marginBottom: 10 }}>
+                <div style={{ color: "#C0392B", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>待確認</div>
+                {result.unresolved.map(line => <div key={line} style={{ fontSize: 13, color: "#6B635C", lineHeight: 1.6 }}>{line}</div>)}
+              </div>
+            )}
+
+            <ActionBtn onClick={handleSave} color="#2E7D52" flex={1}>確認匯入估價單</ActionBtn>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MemoPreviewSection({ title, items, total, sub }) {
+  return (
+    <div style={{ marginTop: sub ? 8 : 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", color: sub ? "#1A1714" : "#1C3F6E", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+        <span>{title}</span>
+        <span>NT$ {fmt(total)}</span>
+      </div>
+      {items.length === 0 && <div style={{ fontSize: 12, color: "#9C948D", padding: "6px 0" }}>無項目</div>}
+      {items.map((item, i) => (
+        <div key={item.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, borderBottom: "1px solid #F5F2EE", padding: "6px 0", fontSize: 13 }}>
+          <span>{i + 1}. {item.name}</span>
+          <span style={{ whiteSpace: "nowrap" }}>{item.qty}{item.unit} × {fmt(item.price)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SwipeBackShell({ children, onBack }) {
+  const startRef = React.useRef(null);
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    if (!touch || touch.clientX > 36) {
+      startRef.current = null;
+      return;
+    }
+    const target = e.target;
+    if (target?.closest && target.closest("input, textarea, select")) {
+      startRef.current = null;
+      return;
+    }
+    startRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!startRef.current || !onBack) return;
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+    const dx = touch.clientX - startRef.current.x;
+    const dy = Math.abs(touch.clientY - startRef.current.y);
+    startRef.current = null;
+    if (dx > 80 && dy < 60) onBack();
+  };
+
+  return (
+    <div className="app-shell" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {children}
+    </div>
+  );
+}
+
 function TopBar({ title, onBack }) {
   return (
     <div style={{ background: "#fff", borderBottom: "1px solid #E2DDD8", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 10 }}>
@@ -799,14 +1071,24 @@ function TopBar({ title, onBack }) {
 
       const quotes = activeCompany ? (data[activeCompany] || []) : [];
       const activeQuote = quotes.find(q => q.id === activeQuoteId) || null;
+      const goBack = () => {
+        if (screen === "home") return;
+        if (screen === "company") setScreen("home");
+        if (screen === "quote") setScreen("company");
+        if (screen === "edit") setScreen(editTarget ? "quote" : "company");
+        if (screen === "memoImport") setScreen("company");
+      };
 
       return (
+        <SwipeBackShell onBack={goBack}>
         <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "#F7F4F0", fontFamily: "'Noto Sans TC','PingFang TC',sans-serif" }}>
           {screen === "home" && <HomeScreen data={data} onSelect={c => { setActiveCompany(c); setScreen("company"); }} />}
-          {screen === "company" && <CompanyScreen company={activeCompany} quotes={quotes} onBack={() => setScreen("home")} onSelect={id => { setActiveQuoteId(id); setScreen("quote"); }} onNew={() => { setEditTarget(null); setScreen("edit"); }} />}
+          {screen === "company" && <CompanyScreen company={activeCompany} quotes={quotes} onBack={() => setScreen("home")} onSelect={id => { setActiveQuoteId(id); setScreen("quote"); }} onNew={() => { setEditTarget(null); setScreen("edit"); }} onImport={() => setScreen("memoImport")} />}
           {screen === "quote" && activeQuote && <QuoteScreen quote={activeQuote} company={activeCompany} onBack={() => setScreen("company")} onEdit={() => { setEditTarget(activeQuote); setScreen("edit"); }} onDelete={() => deleteQuote(activeQuote.id)} />}
           {screen === "edit" && <EditScreen initial={editTarget} onSave={saveQuote} onCancel={() => setScreen(editTarget ? "quote" : "company")} />}
+          {screen === "memoImport" && <MemoImportScreen onBack={() => setScreen("company")} onSave={saveQuote} />}
         </div>
+        </SwipeBackShell>
       );
     }
     
